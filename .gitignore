@@ -6,3 +6,10 @@ build/
 runtime/
 logs/
 /bin/
+
+#
+
+# eclipse file
+.classpath
+.project
+
