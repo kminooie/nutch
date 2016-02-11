@@ -195,6 +195,7 @@
       <packageset dir="${plugins.dir}/microformats-reltag/src/java"/>
       <packageset dir="${plugins.dir}/parse-ext/src/java"/>
       <packageset dir="${plugins.dir}/parse-html/src/java"/>
+      <packageset dir="${plugins.dir}/parse-html_a/src/java"/>
       <packageset dir="${plugins.dir}/parse-js/src/java"/>
       <packageset dir="${plugins.dir}/parse-metatags/src/java"/>
       <packageset dir="${plugins.dir}/parse-swf/src/java"/>
@@ -632,6 +633,7 @@
       <packageset dir="${plugins.dir}/microformats-reltag/src/java"/>
       <packageset dir="${plugins.dir}/parse-ext/src/java"/>
       <packageset dir="${plugins.dir}/parse-html/src/java"/>
+      <packageset dir="${plugins.dir}/parse-html_a/src/java"/>
       <packageset dir="${plugins.dir}/parse-js/src/java"/>
       <packageset dir="${plugins.dir}/parse-metatags/src/java"/>
       <packageset dir="${plugins.dir}/parse-swf/src/java"/>
@@ -1037,6 +1039,8 @@
         <source path="${plugins.dir}/parse-ext/src/test/" />
         <source path="${plugins.dir}/parse-html/src/java/" />
         <source path="${plugins.dir}/parse-html/src/test/" />
+        <source path="${plugins.dir}/parse-html_a/src/java/" />
+        <source path="${plugins.dir}/parse-html_a/src/test/" />
         <source path="${plugins.dir}/parse-js/src/java/" />
         <source path="${plugins.dir}/parse-metatags/src/java/" />
         <source path="${plugins.dir}/parse-metatags/src/test/" />
