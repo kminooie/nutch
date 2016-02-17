@@ -137,7 +137,7 @@ public class HtmlParser implements Parser {
 
   public ParseResult getParse(Content content) {
     HTMLMetaTags metaTags = new HTMLMetaTags();
-
+   
     URL base;
     try {
       base = new URL(content.getBaseUrl());

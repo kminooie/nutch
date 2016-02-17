@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.nutch.parse.html;
+package org.apache.nutch.parse.html_a;
 
 import org.apache.nutch.parse.Outlink;
 import org.apache.hadoop.conf.Configuration;

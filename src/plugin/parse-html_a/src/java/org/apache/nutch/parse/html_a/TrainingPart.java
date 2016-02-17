@@ -9,69 +9,46 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.nutch.metadata.Metadata;
+import org.apache.nutch.parse.Parse;
 import org.apache.nutch.parse.ParseResult;
 import org.apache.nutch.parse.ParseStatus;
+import org.apache.nutch.parse.Parser;
 import org.apache.nutch.protocol.Content;
 import org.jsoup.nodes.Node;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.nutch.parse.html_a.KnowledgeBaseCompare;
 
+public class TrainingPart implements Parser{
 
-
-
-
-
-public class TrainingPart {
-
-	static final String JDBC_DRIVER = "org.mariadb.jdbc.Driver";  
-	static final String DB_URL = "jdbc:mysql://localhost/KnowledgeBase";
-
-	// Database credentials
-	static final String USER = "pasha";
-	static final String PASS = "2014";
-
-
-	public static final Logger LOG = LoggerFactory.getLogger("org.apache.nutch.parse.html_a");
+	public static final Logger LOG = LoggerFactory.getLogger(TrainingPart.class);
 
 	private Configuration conf;
-	
-	private static KnowledgeBaseCompare node1;
-	
-	
+
+	public static KnowledgeBaseCompare node1;
+	public static Node node;
+
 	public TrainingPart() {
-		if( null == node1 ) {
-			node1 = new KnowledgeBaseCompare();
-		}
+		LOG.info( "aaaaaaaaaaaaaaaaaaaaaaaaaaa" );
+		node1 = new KnowledgeBaseCompare();
 	}
 
-	public void getParse(Content content) throws IOException ,ClassNotFoundException, SQLException{
+	public ParseResult getParse(Content content) {
 
+		LOG.info("aaaaaaaaaaaaa" );
 		//to extract the content of a page
-		String contentType = content.getContentType();
 		String baseUrl=content.getBaseUrl();
 		String text=content.getContent().toString();
-		String ulr=content.getUrl();
+		String url=content.getUrl();
 
+				
+		node=node1.parseDom(text);
 
-
-		Node node=node1.parseDom(text);
-
-		//ConnectMysql asa=new ConnectMysql(USER,PASS,JDBC_DRIVER,DB_URL);
-
-		node1.makeDatabase(node, "html/body");
-
-
-
-
-		//System.out.println( asa.addNode("www.2locos.com","article","html/body/div[2]","<body>...</body>"));
-
-		//asa.addIncNode("www.3locos.com","shopping","html/body/div[2]","<body><div>...</div></body>");
-		//call destructor to release the database connection
-		//asa.finalize();		
+		node1.makeDatabase(node, "html/body",baseUrl,url);
+		return null;
 
 	}
 
@@ -80,8 +57,6 @@ public class TrainingPart {
 		this.conf = conf;
 
 	}
-
-
 
 	public Configuration getConf() {
 		return this.conf;
