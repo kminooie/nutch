@@ -28,6 +28,7 @@ import org.apache.nutch.indexer.IndexWriter;
 import org.apache.nutch.indexer.IndexerMapReduce;
 import org.apache.nutch.indexer.NutchDocument;
 import org.apache.nutch.indexer.NutchField;
+import org.apache.nutch.metadata.Metadata;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.request.UpdateRequest;
@@ -98,7 +99,12 @@ public class SolrIndexWriter implements IndexWriter {
 
   public void write(NutchDocument doc) throws IOException {
     final SolrInputDocument inputDoc = new SolrInputDocument();
+    
+    LOG.info("Kaveh, check the doc: "+doc.toString());
+    
+    
     for (final Entry<String, NutchField> e : doc) {
+      LOG.info( "key:"+e.getKey() );
       for (final Object val : e.getValue().getValues()) {
         // normalise the string representation for a Date
         Object val2 = val;

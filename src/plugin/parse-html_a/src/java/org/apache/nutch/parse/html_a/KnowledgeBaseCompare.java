@@ -5,6 +5,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 
@@ -12,10 +14,10 @@ import java.sql.SQLException;
 public class KnowledgeBaseCompare {
 
 	static Knowledge conndb;
+	public static final Logger LOG = LoggerFactory.getLogger(KnowledgeBaseCompare.class);
 
 	//change a string to a DOM and return a node
 	public Node parseDom (String page_content){
-
 		Document doc = Jsoup.parse(page_content);
 		doc.select("script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden").remove();
 		Elements ele=doc.getElementsByTag("body");
@@ -27,7 +29,6 @@ public class KnowledgeBaseCompare {
 
 	//this function traverses a node and put them in database
 	public void makeDatabase(Node node,String xpath,String host, String path) {
-
 		//put the node in database
 		try{
 			conndb.addIncNode(host,path, xpath, node.toString());
@@ -69,12 +70,9 @@ public class KnowledgeBaseCompare {
 
 	//constructor for make a connection with database
 	public KnowledgeBaseCompare(){
-		conndb=new ConnectMysql();	
+		LOG.info("KnowledgeBase Class constructor create a new connection.");
+		conndb=new ConnectMysql();
 	}
-
-
-
-
 
 
 }

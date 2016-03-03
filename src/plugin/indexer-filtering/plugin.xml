@@ -16,13 +16,13 @@
  limitations under the License.
 -->
 <plugin
-   id="parse-html_a"
-   name="Html Parse plug training"
-   version="0.0.1"
-   provider-name="nutch.org">
+   id="indexer-filtering"
+   name="Filtering Parse Part"
+   version="0.0.2"
+   provider-name="doslocos.com">
 
    <runtime>
-      <library name="parse-html_a.jar">
+      <library name="indexer-filtering.jar">
          <export name="*"/>
       </library>
       
@@ -36,12 +36,12 @@
 
    </requires>
 
-   <extension id="org.apache.nutch.parse.html_a"
-              name="TrainingPart"
-              point="org.apache.nutch.parse.Parser">
+   <extension id="com.doslocos.indexer.filtering"
+              name="Filtering Parse Part"
+              point="org.apache.nutch.indexer.IndexingFilter">
 
-      <implementation id="org.apache.nutch.parse.html_a.TrainingPart"
-                      class="org.apache.nutch.parse.html_a.TrainingPart">
+      <implementation id="com.doslocos.indexer.filtering.FilteringXpath"
+                      class="com.doslocos.indexer.filtering.FilteringXpath">
         <parameter name="contentType" value="text/html|application/xhtml+xml"/>
         <parameter name="pathSuffix" value=""/>
       </implementation>

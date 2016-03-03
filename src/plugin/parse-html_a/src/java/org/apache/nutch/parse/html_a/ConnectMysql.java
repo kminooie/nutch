@@ -15,13 +15,7 @@ import org.slf4j.LoggerFactory;
 public class ConnectMysql implements Knowledge {
 
 
-	//the variable and constant 
-	private static String domain = "localhost";
-	private static String schema = "KnowledgeBase";
-
-	// Database credentials
-	private static String USER = "pasha";
-	private static String PASS = "2014";
+	
 
 	private static Connection conn = null;
 
@@ -39,11 +33,17 @@ public class ConnectMysql implements Knowledge {
 	}
 
 	private static boolean initConnection() {
+		
+		
 		boolean result = true;
 
 		if( null == conn ) {
 			try {
-				conn = DriverManager.getConnection( "jdbc:mysql://"+domain+"/"+schema, USER, PASS);
+				
+				Class.forName("org.mariadb.jdbc.Driver");
+				String sqlConnection="jdbc:mysql://"+TrainingPart.domain_2locos_tariningpart+"/"+TrainingPart.schema_2locos_tariningpart;
+				conn = DriverManager.getConnection(sqlConnection, TrainingPart.USER_2locos_tariningpart, TrainingPart.PASS_2locos_tariningpart);
+				LOG.info("conection successfully stablished" );
 			} catch( Exception e ) {
 				LOG.error( "Failed to establish connection:", e );
 				result = false;
@@ -56,6 +56,8 @@ public class ConnectMysql implements Knowledge {
 
 	@Override
 	public boolean addIncNode(String domain, String path, String xpath, String content) {
+		
+
 		boolean result = addNode( domain, path, xpath, content ); 
 		
 		if( ! result ) {
@@ -68,6 +70,7 @@ public class ConnectMysql implements Knowledge {
 	//this function add a node in database  done!
 	@Override
 	public boolean addNode(String domain, String path, String xpath, String content) {
+
 		boolean result = false;
 		
 		
@@ -86,6 +89,18 @@ public class ConnectMysql implements Knowledge {
 
 			psSelect.executeUpdate();
 			result = true;
+		} catch( java.sql.SQLIntegrityConstraintViolationException e ) {
+			// assuming node already exist 
+			// TODO make sure that is true
+			LOG.info( "Got SQLIntegrity exception assume node already exist hash:" + xpath );
+			result = false; // Redundant
+		
+		}catch( java.sql.BatchUpdateException e ) {
+			// assuming node already exist 
+			// TODO make sure that is true
+
+			result = false; // Redundant
+		
 		} catch (SQLException e) {
 			// TODO check for existing node is part of normal operation and not an error
 			LOG.error( "Exception while adding a new node:", e );
@@ -101,7 +116,7 @@ public class ConnectMysql implements Knowledge {
 	public boolean incNodeFreq(String domain, String xpath, int hash) {
 		boolean result = false;
 		
-		
+
 		
 		try {
 			
