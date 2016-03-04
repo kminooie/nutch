@@ -78,6 +78,7 @@ public class ConnectMysql implements Knowledge {
 			
 			if( null == psSelect ) {
 				psSelect = conn.prepareStatement( "INSERT INTO pages (host,xpath,hash,frequency,content,path) VALUES (?, ?, ?, 1, ?, ?);" );
+				LOG.info("insert a node in database. the node is : "+xpath);
 			}
 
 
