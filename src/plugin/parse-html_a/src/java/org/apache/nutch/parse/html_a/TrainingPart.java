@@ -4,6 +4,10 @@ package org.apache.nutch.parse.html_a;
 import java.net.MalformedURLException;
 import java.net.URL;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.nutch.parse.Outlink;
+import org.apache.nutch.parse.OutlinkExtractor;
+import org.apache.nutch.parse.ParseData;
+import org.apache.nutch.parse.ParseImpl;
 import org.apache.nutch.parse.ParseResult;
 import org.apache.nutch.parse.ParseStatus;
 import org.apache.nutch.parse.Parser;
@@ -37,15 +41,15 @@ public class TrainingPart implements Parser{
 	}
 
 	public ParseResult getParse(Content content) {
-
+		
+		LOG.info("kaveh, the training part class called");
 
 		//to extract the content of a page
-		//String baseUrl=content.getBaseUrl();
-		//HTMLBody=content.getContent().toString();
-		
+
 		String HTMLBody = new String(content.getContent());
-		
-		node=kbc.parseDom( HTMLBody );
+		//step 1     String fieldName = "rawcontent";
+		String rawcontent=HTMLBody;
+		node = kbc.parseDom( HTMLBody );
 
 		try {
 			netUrl = new URL(content.getUrl());
@@ -53,28 +57,42 @@ public class TrainingPart implements Parser{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		LOG.info("HTMLBody is:"+HTMLBody);
-		LOG.info("netUrl.getHost() is:"+netUrl.getHost());
-		LOG.info("netUrl.getPath() is:"+netUrl.getPath());
 
-		LOG.info("node is:"+node.toString());
-		kbc.makeDatabase(node, "html/body",netUrl.getHost(),netUrl.getPath());
-
-		ParseResult result = new ParseStatus(ParseStatus.SUCCESS, "Parsed." ).getEmptyParseResult( content.getUrl(), getConf() );
-		//Parse parse = result.get(content.getUrl());
-	   // Metadata metadata = parse.getData().getParseMeta();
-	   // metadata.add( "rawcontent", HTMLBody );
-	    
-	    return result;
+		kbc.makeDatabase( node, "html/body", netUrl.getHost(), netUrl.getPath() );
+		LOG.info("kaveh, the page add to database with url :  "+netUrl.getPath());
+		
+		// collect outlink
+		Outlink[] outlinks = OutlinkExtractor.getOutlinks( HTMLBody, getConf());
+		
+	//step1	ParseData parseData = new ParseData(ParseStatus.STATUS_SUCCESS, fieldName,
+		//step1		outlinks, content.getMetadata());
+		//step1	return ParseResult.createParseResult(content.getUrl(), new ParseImpl( HTMLBody,
+		//step1		parseData));		
+		
+		/*	
+		ParseResult parseResult = new ParseResult(content.getUrl());
+		ParseText parseText = new ParseText(HTMLBody);
+		ParseData parseData = new ParseData(ParseStatus.STATUS_SUCCESS, title,
+				outlinks, content.getMetadata());				
+		*/
+		return ParseResult.createParseResult(content.getUrl(), new ParseImpl(HTMLBody,
+				new ParseData(ParseStatus.STATUS_SUCCESS, rawcontent, outlinks, 
+                content.getMetadata())));
+		
+		
+		
+		
+		
+		
 	}
 
 
 	public void setConf(Configuration conf) {
-		
+
 		schema_2locos_tariningpart=conf.get("database.schema");
 		USER_2locos_tariningpart=conf.get("database.username");
 		PASS_2locos_tariningpart=conf.get("database.password");
-		
+
 		kbc = new KnowledgeBaseCompare();
 		TrainingPart.conf = conf;
 	}
@@ -83,27 +101,8 @@ public class TrainingPart implements Parser{
 
 		return TrainingPart.conf;
 	}
-	/*
-	
-	public NutchDocument filter(NutchDocument doc, Parse parse, Text url, CrawlDatum datum, Inlinks inlinks)
-			throws IndexingException {
-		
-		//doc.add("rawHTMLBody",HTMLBody);
-		LOG.info("kaveh, the doc is: "+doc.toString());
-		LOG.info("kaveh, url.toString() is : "+url.toString());
-		LOG.info("kaveh, datum.toString() is: "+datum.toString());
-		LOG.info("kaveh, datum.getMetaData().toString() is: "+datum.getMetaData().toString());
-		LOG.info("kaveh, the inlinks.toString() is : "+inlinks.toString());
 
 
-		LOG.info("kaveh, the parse.getText() is: "+parse.getText());
-		LOG.info("kaveh, the parse.toString() is: "+parse.toString());
-		LOG.info("kaveh, the parse.getData().toString() is: "+parse.getData().toString());
-		LOG.info("kaveh, the parse.getData().getParseMeta().toString() is: "+parse.getData().getParseMeta().toString());
-		
 
-		return doc;
-	}
 
-*/
 }

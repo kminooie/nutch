@@ -4,7 +4,6 @@ package org.apache.nutch.parse.html_a;
 import java.sql.SQLException;
 import java.util.Map;
 
-import org.jsoup.nodes.Node;
 
 public interface Knowledge {
 	

@@ -3,11 +3,8 @@ package org.apache.nutch.parse.html_a;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Map;
-import org.mariadb.jdbc.Driver;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +75,6 @@ public class ConnectMysql implements Knowledge {
 			
 			if( null == psSelect ) {
 				psSelect = conn.prepareStatement( "INSERT INTO pages (host,xpath,hash,frequency,content,path) VALUES (?, ?, ?, 1, ?, ?);" );
-				LOG.info("insert a node in database. the node is : "+xpath);
 			}
 
 
@@ -87,6 +83,11 @@ public class ConnectMysql implements Knowledge {
 			psSelect.setInt(3, content.hashCode());
 			psSelect.setString(4,content);
 			psSelect.setString(5,path);
+			
+			//LOG.info("kaveh, insert a node with xpath : "+xpath);
+			//LOG.info("kaveh, insert a node with domain : "+domain);
+			//LOG.info("kaveh, insert a node with content : "+content);
+
 
 			psSelect.executeUpdate();
 			result = true;
@@ -99,6 +100,7 @@ public class ConnectMysql implements Knowledge {
 		}catch( java.sql.BatchUpdateException e ) {
 			// assuming node already exist 
 			// TODO make sure that is true
+			//LOG.info( "Got BatchUpdateException exception assume node already exist hash:" + xpath );
 
 			result = false; // Redundant
 		
@@ -163,7 +165,4 @@ public class ConnectMysql implements Knowledge {
 
 
 }
-
-
-
 

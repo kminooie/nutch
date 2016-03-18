@@ -34,8 +34,6 @@
      <ant dir="index-geoip" target="deploy"/>
      <ant dir="index-more" target="deploy"/>
      <ant dir="index-replace" target="deploy"/>
-     <ant dir="indexer-filtering" target="deploy"/>
-  	
      <ant dir="index-static" target="deploy"/>
      <ant dir="index-metadata" target="deploy"/>
      <ant dir="index-links" target="deploy"/>
@@ -146,8 +144,6 @@
     <ant dir="index-anchor" target="clean"/>
     <ant dir="index-geoip" target="clean"/>
     <ant dir="index-more" target="clean"/>
-  	<ant dir="indexer-filtering" target="clean"/>
-
     <ant dir="index-static" target="clean"/>
     <ant dir="index-replace" target="clean"/>
     <ant dir="index-metadata" target="clean"/>

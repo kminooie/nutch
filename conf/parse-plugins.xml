@@ -58,19 +58,19 @@
 	<mimeType name="text/html">
 		<plugin id="parse-html" />
 	</mimeType>
-
-    <mimeType name="text/html">
+    
+    <mimeType name="application/xhtml+xml">
+		<plugin id="parse-html" />
+	</mimeType>
+	
+	<mimeType name="text/html">
+		<plugin id="parse-html_a" />
+	</mimeType>
+    
+    <mimeType name="application/xhtml+xml">
 		<plugin id="parse-html_a" />
 	</mimeType>
 	
-	<mimeType name="application/xhtml+xml">
-		<plugin id="parse-html_a" />
-	</mimeType>
-		
-        <mimeType name="application/xhtml+xml">
-		<plugin id="parse-html" />
-	</mimeType>
-
 	<mimeType name="text/xml">
 		<plugin id="parse-tika" />
 		<plugin id="feed" />
@@ -94,9 +94,11 @@
 		<alias name="parse-ext" extension-id="ExtParser" />
 		<alias name="parse-html"
 			extension-id="org.apache.nutch.parse.html.HtmlParser" />
-        <alias name="parse-html_a"
+			
+      <alias name="parse-html_a"
 			extension-id="org.apache.nutch.parse.html_a.TrainingPart" />
-		<alias name="parse-js" extension-id="JSParser" />
+			
+       <alias name="parse-js" extension-id="JSParser" />
 		<alias name="feed"
 			extension-id="org.apache.nutch.parse.feed.FeedParser" />
 		<alias name="parse-swf"

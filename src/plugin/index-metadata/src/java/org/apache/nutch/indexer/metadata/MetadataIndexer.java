@@ -30,6 +30,7 @@ import org.apache.nutch.indexer.IndexingFilter;
 import org.apache.nutch.indexer.NutchDocument;
 import org.apache.nutch.parse.Parse;
 
+
 /**
  * Indexer which can be configured to extract metadata from the crawldb, parse
  * metadata or content metadata. You can specify the properties "index.db.md",
@@ -47,7 +48,7 @@ public class MetadataIndexer implements IndexingFilter {
 
   public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
       CrawlDatum datum, Inlinks inlinks) throws IndexingException {
-
+	  
     // just in case
     if (doc == null)
       return doc;
@@ -58,6 +59,7 @@ public class MetadataIndexer implements IndexingFilter {
         Text metadata = (Text) datum.getMetaData().get(new Text(metatag));
         if (metadata != null)
           doc.add(metatag, metadata.toString());
+        
       }
     }
 
