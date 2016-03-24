@@ -26,29 +26,28 @@ public class IndexingPart implements IndexingFilter {
 	@Override
 	public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
 			CrawlDatum datum, Inlinks inlinks) throws IndexingException  {
-		// add the fields from contentmd
-		LOG.info("Alec, the Indexing part called!");
-		//LOG.info("the rawcontent is : "+parse.getData().getParseMeta().get("rawcontent"));
-		//String HTMLBody=parse.getData().getParseMeta().get("rawcontent");
+
 
 		//parsing the web page
 		ParsingPart nodeParse=new ParsingPart();
 
 		//assign the value of frequency from nutch-site to the variable in parsingpart class 
 		ParsingPart.frequency_threshould=schema_2locos_frequency_threshould;
-		//	LOG.info("kaveh, the value of schema_2locos_frequency_threshould is : "+ schema_2locos_frequency_threshould );
 
 		//parsing web page
 		Node nodePage=nodeParse.parseDom(parse.getData().getParseMeta().get("rawcontent"));
-		//LOG.info("Kaveh, the page  extract from nutch documents as a content after parsing is  :  "+nodePage);
 
 		//compare web page with database
 		String textContent=ParsingPart.compareKB(nodePage, "html/body",doc.getFieldValue("host").toString());
-		LOG.info("kaveh it is "+doc.getFieldValue("url")+"the final parse : "+textContent);
-		LOG.info("kaveh, the original parsed text is : "+parse.getText());
+
+		//removing old parsed text and adding the new one
+		doc.removeField("content");
+		doc.add("content", textContent);
+
+		//remove temporary field from metadata
 		parse.getData().getParseMeta().remove("rawcontent");
-		LOG.info("kaveh, the rawcontent removerd from metadata");
-		
+
+
 		return doc;
 	}
 

@@ -61,34 +61,26 @@ public class ParsingPart {
 	public static String compareKB(Node node_1, String xpath, String domain){
 		String content="";
 		int freq = 0;
-		LOG.info("kaveh, the node that recieved by compareKB is : "+xpath+"  "+node_1.toString());
 		freq = conn1.getNodeFreq( domain, xpath, node_1.toString() );
 
 		if ( freq > frequency_threshould){
 			//assign value 1 to a node whom exists in database
 
-			LOG.info("kaveh, node exist in KB and frequency is : "+freq+"  of node is more than threshold. the xpath is : "+xpath +"and the domain is: "+domain+ " and the content of node is : "+node_1.toString());
 
 
 		} else {
-			LOG.info("kaveh,this node frequency is lower than threshold in KB "+xpath +"the content of node is : "+node_1.toString());
-			//check how many children the node has
 			content=extractText(node_1);
 			if (node_1.childNodeSize() > 0 ) {
-				//	LOG.info("kaveh, the node has children so call compareKb for all the children");
-				LOG.info("kaveh, the children size is: "+node_1.childNodeSize()+" of node with xpath:  "+xpath+" and with content : "+node_1.toString() );
 
 				for (int i1=0;i1<node_1.childNodeSize();i1++){
-					LOG.info("kaveh, children called is : "+node_1.childNode(i1).toString());
 					String newXpath=xpath+"/"+xpathMaker(node_1.childNode(i1));
 					content=content+" "+compareKB(node_1.childNode(i1),newXpath,domain);
-					LOG.info( "kaveh, compareKB called for children of node with path: "+newXpath);
 
 				}
 
 			}
 		}
-		return content;
+		return content.trim();
 
 	}
 
@@ -98,7 +90,7 @@ public class ParsingPart {
 	public static String extractText(Node node){
 		String string1="";
 		if (node.hasAttr("text")){
-			string1=node.attr("text").replaceAll("\\s+", " ");
+			string1=node.attr("text").replaceAll("\\s+", " ").trim();
 		}
 
 		return string1;	

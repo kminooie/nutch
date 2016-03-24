@@ -59,13 +59,12 @@ public class TrainingPart implements HtmlParseFilter{
 		}
 
 		kbc.makeDatabase( node, "html/body", netUrl.getHost(), netUrl.getPath() );
-		LOG.info("kaveh, the page add to database with url :  "+netUrl.getPath());
 
 		Parse parse = parseResult.get(content.getUrl());
 		Metadata metadata = parse.getData().getParseMeta();
 
 		metadata.add( "rawcontent", HTMLBody );
-		
+
 		return parseResult;
 
 	}
