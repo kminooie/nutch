@@ -1,8 +1,7 @@
-package org.apache.nutch.parse.html_a;
+package com.doslocos.nutch.datamining;
 
 
 import java.sql.SQLException;
-import java.util.Map;
 
 
 public interface Knowledge {
@@ -13,7 +12,7 @@ public interface Knowledge {
 
 	public boolean incNodeFreq( String host,String xpath, int hash ) throws SQLException;
 
-	public Map<String,Object> getNode( String host,String xpath, int hash );
+	public int getNodeFreq( String domain,String xpath, String content );
 
 
 }

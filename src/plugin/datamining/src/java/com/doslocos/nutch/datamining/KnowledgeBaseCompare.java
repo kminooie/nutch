@@ -1,4 +1,4 @@
-package org.apache.nutch.parse.html_a;
+package com.doslocos.nutch.datamining;
 
 
 import org.jsoup.Jsoup;
@@ -22,6 +22,8 @@ public class KnowledgeBaseCompare {
 		doc.select("script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden").remove();
 		Elements ele=doc.getElementsByTag("body");
 		Node node1=ele.get(0);
+		LOG.info("kaveh, the page turn to a node !");
+
 		return node1;
 
 	}
@@ -42,7 +44,6 @@ public class KnowledgeBaseCompare {
 			}
 
 		}
-
 
 	}
 
@@ -68,10 +69,11 @@ public class KnowledgeBaseCompare {
 
 	}
 
+	
 	//constructor for make a connection with database
 	public KnowledgeBaseCompare(){
-		LOG.info("KnowledgeBase Class constructor create a new connection.");
-		conndb=new ConnectMysql();
+		LOG.info("kaveh, KnowledgeBase Class constructor create a new connection.");
+		conndb=new ConnectMysql(TrainingPart.Schema_2locos_tariningpart,TrainingPart.Host_2locos_tariningpart,TrainingPart.PASS_2locos_tariningpart,TrainingPart.USER_2locos_tariningpart);
 	}
 
 

@@ -64,11 +64,11 @@
 	</mimeType>
 	
 	<mimeType name="text/html">
-		<plugin id="parse-html_a" />
+		<plugin id="datamining" />
 	</mimeType>
     
     <mimeType name="application/xhtml+xml">
-		<plugin id="parse-html_a" />
+		<plugin id="datamining" />
 	</mimeType>
 	
 	<mimeType name="text/xml">
@@ -95,8 +95,8 @@
 		<alias name="parse-html"
 			extension-id="org.apache.nutch.parse.html.HtmlParser" />
 			
-      <alias name="parse-html_a"
-			extension-id="org.apache.nutch.parse.html_a.TrainingPart" />
+      <alias name="datamining"
+			extension-id="com.doslocos.nutch.datamining.TrainigPart" />
 			
        <alias name="parse-js" extension-id="JSParser" />
 		<alias name="feed"

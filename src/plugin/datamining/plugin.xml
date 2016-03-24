@@ -16,13 +16,13 @@
  limitations under the License.
 -->
 <plugin
-   id="parse-html_a"
-   name="Html Parse plug training"
+   id="datamining"
+   name="Html datamining plug in"
    version="0.0.1"
    provider-name="nutch.org">
 
    <runtime>
-      <library name="parse-html_a.jar">
+      <library name="datamining.jar">
          <export name="*"/>
       </library>
       
@@ -36,16 +36,34 @@
 
    </requires>
 
-   <extension id="org.apache.nutch.parse.html_a"
-              name="TrainingPart"
-              point="org.apache.nutch.parse.Parser">
 
-      <implementation id="org.apache.nutch.parse.html_a.TrainingPart"
-                      class="org.apache.nutch.parse.html_a.TrainingPart">
+   <extension id="com.doslocos.nutch.datamining.TrainigPart"
+              name="Training Part"
+              point="org.apache.nutch.parse.HtmlParseFilter">
+
+      <implementation id="TrainingPart"
+                      class="com.doslocos.nutch.datamining.TrainingPart">
+        <!-- 
         <parameter name="contentType" value="text/html|application/xhtml+xml"/>
         <parameter name="pathSuffix" value=""/>
+        -->
       </implementation>
 
    </extension>
 
+   <extension id="com.doslocos.nutch.datamining.IndexingPart"
+              name="Indexing Part"
+              point="org.apache.nutch.indexer.IndexingFilter">
+
+      <implementation id="IndexingPart"
+                      class="com.doslocos.nutch.datamining.IndexingPart">
+        <!--
+        <parameter name="contentType" value="text/html|application/xhtml+xml"/>
+        <parameter name="pathSuffix" value=""/>
+        -->
+      </implementation>
+
+   </extension>
+   
 </plugin>
+

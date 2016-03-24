@@ -1,4 +1,4 @@
-package org.apache.nutch.indexwriter.solr;
+package com.doslocos.nutch.datamining;
 
 import java.util.ArrayList;
 import java.util.List;

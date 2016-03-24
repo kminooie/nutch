@@ -46,7 +46,6 @@ public class SolrIndexWriter implements IndexWriter {
 	private SolrMappingReader solrMapping;
 	private ModifiableSolrParams params;
 
-	public static int schema_2locos_frequency_threshould;
 
 	private Configuration config;
 
@@ -102,20 +101,7 @@ public class SolrIndexWriter implements IndexWriter {
 		final SolrInputDocument inputDoc = new SolrInputDocument();
 		//this part added by alireza pasha
 		
-		LOG.info("Kaveh, check the doc content : "+doc.getFieldValue("content"));
-		LOG.info("Kaveh, check the doc1 tstamp : "+doc.getFieldValue("tstamp"));
-		LOG.info("Kaveh, check the doc1 segment : "+doc.getFieldValue("segment"));
-		LOG.info("Kaveh, check the doc1 digest : "+doc.getFieldValue("digest"));
-		LOG.info("Kaveh, check the doc1 host : "+doc.getFieldValue("host"));
-		LOG.info("Kaveh, check the doc1 boost : "+doc.getFieldValue("boost"));
-		LOG.info("Kaveh, check the doc1 id : "+doc.getFieldValue("id"));
-		LOG.info("Kaveh, check the doc.getFieldValue(title): "+doc.getFieldValue("title"));
-		LOG.info("Kaveh, check the doc.getFieldValue(url) "+doc.getFieldValue("url"));
-		LOG.info("Kaveh, check the metatag.description : "+doc.getFieldValue("metatag.description"));
-		LOG.info("Kaveh, check the metatag.keywords : "+doc.getFieldValue("metatag.keywords"));
-		LOG.info("Kaveh, check the anchor : "+doc.getFieldValue("anchor"));
-		LOG.info("Kaveh, check the divcontent : "+doc.getFieldValue("divcontent"));
-
+		
 		
 
 		 /*
@@ -225,7 +211,6 @@ public class SolrIndexWriter implements IndexWriter {
 	@Override
 	public void setConf(Configuration conf) {
 		config = conf;
-		schema_2locos_frequency_threshould=Integer.parseInt(conf.get("frequency_threshould"));
 
 		String serverURL = conf.get(SolrConstants.SERVER_URL);
 		if (serverURL == null) {
