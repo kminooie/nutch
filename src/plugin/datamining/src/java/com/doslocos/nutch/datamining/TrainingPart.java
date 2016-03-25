@@ -30,6 +30,7 @@ public class TrainingPart implements HtmlParseFilter{
 	public static Configuration conf;
 
 	public static KnowledgeBaseCompare kbc;
+	//public static ParsingText;
 	public static Node node;
 	public static URL netUrl;
 	public static String HTMLBody;
@@ -48,7 +49,8 @@ public class TrainingPart implements HtmlParseFilter{
 
 		//to extract the content of a page
 		String HTMLBody = new String(content.getContent());
-
+		
+		//node=parseObj.parseDom(HTMLBody);
 		node = kbc.parseDom( HTMLBody );
 
 		try {
