@@ -29,7 +29,7 @@ public class TrainingPart implements HtmlParseFilter{
 	public static String Host_2locos_tariningpart;
 	public static Configuration conf;
 
-	public static KnowledgeBaseCompare kbc;
+	public static ParsingText kbc;
 	//public static ParsingText;
 	public static Node node;
 	public static URL netUrl;
@@ -45,7 +45,6 @@ public class TrainingPart implements HtmlParseFilter{
 	public ParseResult filter(Content content, ParseResult parseResult, HTMLMetaTags metaTags, DocumentFragment doc) {
 
 
-		LOG.info("kaveh, the training part class of plug in called !");
 
 		//to extract the content of a page
 		String HTMLBody = new String(content.getContent());
@@ -56,17 +55,16 @@ public class TrainingPart implements HtmlParseFilter{
 		try {
 			netUrl = new URL(content.getUrl());
 		} catch (MalformedURLException e) {
-			LOG.info("alireza, the error during extract url from content",e);
+			LOG.error("Error during extract url from content",e);
 
 		}
 
 		kbc.makeDatabase( node, "html/body", netUrl.getHost(), netUrl.getPath() );
-		LOG.info("kaveh, the database for "+netUrl.getPath()+" done correctly");
 		Parse parse = parseResult.get(content.getUrl());
 		Metadata metadata = parse.getData().getParseMeta();
-		LOG.info("kaveh, the content add in parse object in nutch : "+netUrl.getPath());
 		metadata.add( "rawcontent", HTMLBody );
 
+		LOG.debug("datamining tarining part finished for : "+content.getUrl());
 		return parseResult;
 
 	}
@@ -79,7 +77,7 @@ public class TrainingPart implements HtmlParseFilter{
 		USER_2locos_tariningpart=conf.get("doslocos.training.database.username");
 		PASS_2locos_tariningpart=conf.get("doslocos.training.database.password");
 
-		kbc = new KnowledgeBaseCompare();
+		kbc = new ParsingText( Schema_2locos_tariningpart,Host_2locos_tariningpart,PASS_2locos_tariningpart,USER_2locos_tariningpart);
 		TrainingPart.conf = conf;
 	}
 
