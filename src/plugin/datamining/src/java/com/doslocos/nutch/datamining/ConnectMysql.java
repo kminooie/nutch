@@ -33,7 +33,7 @@ public class ConnectMysql implements Knowledge {
 		PASS_2locos_tariningpart=pass2locos;
 		Host_2locos_tariningpart=host2locos;
 
-
+		LOG.info("kaveh, connection class called");
 		initConnection( false );
 	}
 
@@ -44,7 +44,7 @@ public class ConnectMysql implements Knowledge {
 		try {
 			if ( conn.isClosed() ) renew = true;
 		} catch ( Exception e ) {
-			LOG.error( "exception while trying to check connection:", e );
+			LOG.error( "alireza, exception while trying to check connection:", e );
 			renew = true;
 		}
 
@@ -60,12 +60,12 @@ public class ConnectMysql implements Knowledge {
 	private static boolean initConnection( boolean force ) {
 		if( force || null == conn ) {
 			try {
-
+				LOG.info("kaveh, initconnection created!");
 				Class.forName("org.mariadb.jdbc.Driver");
 				String sqlConnection="jdbc:mysql://"+Host_2locos_tariningpart+"/"+Schema_2locos_tariningpart;
 				conn = DriverManager.getConnection(sqlConnection, USER_2locos_tariningpart, PASS_2locos_tariningpart);
 			} catch( Exception e ) {
-				LOG.error( "Failed to establish connection:", e );
+				LOG.error( "alireza, Failed to establish connection:", e );
 				return false;
 			}
 		}
@@ -118,13 +118,13 @@ public class ConnectMysql implements Knowledge {
 
 		}catch( java.sql.BatchUpdateException e ) {
 
-			//LOG.info( "Got BatchUpdateException exception assume node already exist hash:" + xpath );
+			//LOG.info( "alireza, Got BatchUpdateException exception assume node already exist hash:" + xpath );
 
 			result = false; // Redundant
 
 		} catch (SQLException e) {
 			// TODO check for existing node is part of normal operation and not an error
-			LOG.error( "Exception while adding a new node:", e );
+			LOG.error( "alireza, Exception while adding a new node:", e );
 		}
 
 		return result;
@@ -154,7 +154,7 @@ public class ConnectMysql implements Knowledge {
 			result = true;
 
 		} catch (SQLException e) {
-			LOG.error( "Exception while increasing the frequency:", e );
+			LOG.error( "alireza, Exception while increasing the frequency:", e );
 		}
 
 
@@ -181,11 +181,11 @@ public class ConnectMysql implements Knowledge {
 			if(rs.next()) {
 				result = rs.getInt("frequency");
 			}else{
-				LOG.info( "cant find " + xpath + " node in database. and content is: "+ content );
+				LOG.info( "alireza, cant find " + xpath + " node in database. and content is: "+ content );
 			}
 		} catch (SQLException e) {
 
-			LOG.error("Except During compare a node with database :"+e);
+			LOG.error("alireza, Except During compare a node with database :"+xpath+"  "+e);
 
 		}
 

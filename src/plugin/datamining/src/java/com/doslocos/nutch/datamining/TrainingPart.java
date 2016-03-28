@@ -49,22 +49,22 @@ public class TrainingPart implements HtmlParseFilter{
 
 		//to extract the content of a page
 		String HTMLBody = new String(content.getContent());
-		
+
 		//node=parseObj.parseDom(HTMLBody);
 		node = kbc.parseDom( HTMLBody );
 
 		try {
 			netUrl = new URL(content.getUrl());
 		} catch (MalformedURLException e) {
-			LOG.info("the error during extract url from content",e);
+			LOG.info("alireza, the error during extract url from content",e);
 
 		}
 
 		kbc.makeDatabase( node, "html/body", netUrl.getHost(), netUrl.getPath() );
-
+		LOG.info("kaveh, the database for "+netUrl.getPath()+" done correctly");
 		Parse parse = parseResult.get(content.getUrl());
 		Metadata metadata = parse.getData().getParseMeta();
-
+		LOG.info("kaveh, the content add in parse object in nutch : "+netUrl.getPath());
 		metadata.add( "rawcontent", HTMLBody );
 
 		return parseResult;

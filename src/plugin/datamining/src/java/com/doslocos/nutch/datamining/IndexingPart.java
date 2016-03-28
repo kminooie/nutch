@@ -36,14 +36,14 @@ public class IndexingPart implements IndexingFilter {
 
 		//parsing web page
 		Node nodePage=nodeParse.parseDom(parse.getData().getParseMeta().get("rawcontent"));
-
+		LOG.info("kaveh, the raw content extracted and changed to a node");
 		//compare web page with database
 		String textContent=ParsingPart.compareKB(nodePage, "html/body",doc.getFieldValue("host").toString());
 
 		//removing old parsed text and adding the new one
 		doc.removeField("content");
 		doc.add("content", textContent);
-
+		LOG.info("kaveh, new parsed text replaced with old one");
 		//remove temporary field from metadata
 		parse.getData().getParseMeta().remove("rawcontent");
 

@@ -22,7 +22,7 @@ public class KnowledgeBaseCompare {
 		doc.select("script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden").remove();
 		Elements ele=doc.getElementsByTag("body");
 		Node node1=ele.get(0);
-
+		LOG.info("kaveh,the page changed to a node");
 		return node1;
 
 	}
@@ -32,15 +32,21 @@ public class KnowledgeBaseCompare {
 	public void makeDatabase(Node node,String xpath,String host, String path) {
 		//put the node in database
 		try{
+			LOG.info("kaveh, the node with add to database "+xpath);
 			conndb.addIncNode(host,path, xpath, node.toString());
 		} catch (SQLException e) {
-
+			LOG.info("alireza, some error happened during adding node to database: "+xpath);
 		}
-		if (node.childNodeSize()>1){
+		try{
+			if (node.childNodeSize()>0){
 
-			for (int childrennum=0;childrennum<node.childNodeSize();childrennum++){
-				makeDatabase(node.childNode(childrennum),xpath+"/"+xpathMaker(node.childNode(childrennum)),host,path);
+				for (int childrennum=0;childrennum<node.childNodeSize();childrennum++){
+					makeDatabase(node.childNode(childrennum),xpath+"/"+xpathMaker(node.childNode(childrennum)),host,path);
+				}
+
 			}
+		}catch(Exception e){
+			LOG.info("alireza, some error happened for calling the children :"+xpath);
 
 		}
 
@@ -50,7 +56,7 @@ public class KnowledgeBaseCompare {
 
 	//this function make an xpath for the nodes  done!
 	public String xpathMaker(Node node){
-
+		
 		int fre=1;
 		Node ft=node;
 		for(int count=node.siblingIndex();count>0;count--){
@@ -59,7 +65,7 @@ public class KnowledgeBaseCompare {
 				fre++;
 			}		
 		}
-
+		
 		if(node.nodeName().startsWith("#")){
 			return(node.nodeName().substring(1)+"()"+"["+fre+"]");
 		}else{

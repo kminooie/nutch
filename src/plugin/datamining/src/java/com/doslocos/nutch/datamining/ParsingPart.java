@@ -65,7 +65,7 @@ public class ParsingPart {
 
 		if ( freq > frequency_threshould){
 			//assign value 1 to a node whom exists in database
-
+			//Do not nothing because the frequency more than threshold and you must skip it
 
 
 		} else {
