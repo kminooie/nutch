@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration>
+<property>
+ <name>doslocos.training.database.host</name>
+ <value>mydbmaster.dev</value>
+ <description> its database host address</description>
+</property>
+
+<property>
+ <name>doslocos.training.database.username</name>
+ <value>ali</value>
+ <description> its database username that you must add in your sql
+ </description>
+</property>
+
+<property>
+ <name>doslocos.training.database.password</name>
+ <value>2014</value>
+ <description>its database password you must change it for connection to database
+ </description>
+</property>
+
+<property>
+ <name>doslocos.training.database.schema</name>
+ <value>KnowledgeBase</value>
+ <description>its the name of your database in the sql
+ </description>
+</property>
+
+
+
+<property>
+ <name>doslocos.frequency.threshould</name>
+ <value>2</value>
+ <description>its the frequency that divided nodes as common nodes and unique nodes
+ </description>
+</property>
+
+</configuration>
