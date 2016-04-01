@@ -5,11 +5,13 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class ConnectMysql implements Knowledge {
+public class ConnectMysql2 implements Knowledge {
 
 	public static String Schema_2locos_tariningpart;
 	public static String USER_2locos_tariningpart ;
@@ -17,29 +19,27 @@ public class ConnectMysql implements Knowledge {
 	public static String Host_2locos_tariningpart;
 
 	private static Connection conn = null;
-	public static  PreparedStatement psSelect = null;
-	public static  PreparedStatement psInsert = null;
-	public static  PreparedStatement psUpdate = null;
+	public static  PreparedStatement psNode, psUrl, psFrequency, psGetFrequency;
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
 	
-	public int counter = 0;
+	public static int counter = 0;
 	
-	public void resetCounter() {
+	public static void resetCounter() {
 		counter = 0;
 	}
 	
-	public void incCounter() {
+	public static void incCounter() {
 		++counter;
 	}
 	
-	public int getCounter() {
+	public static int getCounter() {
 		return counter;
 	}
 
 	//constructor 
-	public ConnectMysql(String schema2locos,String host2locos,String pass2locos,String user2locos){
+	public ConnectMysql2(String schema2locos,String host2locos,String pass2locos,String user2locos){
 		// TODO read db credentials from nutch conf object 
 
 		Schema_2locos_tariningpart=schema2locos;
@@ -93,29 +93,8 @@ public class ConnectMysql implements Knowledge {
 	@Override
 	public boolean addIncNode(String domain, String path, String xpath, String content) {
 
-		boolean result = addNode( domain, path, xpath, content ); 
+		return addNode( domain, path, xpath, content ); 
 
-		if( ! result ) {
-			incNodeFreq( domain, xpath, content.hashCode() );
-
-		}
-
-		return result;
-		//result = false means node increased
-		//result = true means node added
-
-
-
-
-		/*
-		boolean result = addNode( domain, path, xpath, content ); 
-
-		if( ! result ) {
-			result = incNodeFreq( domain, xpath, content.hashCode() );
-		}
-
-		return result;
-		 */
 	}
 
 
@@ -123,42 +102,67 @@ public class ConnectMysql implements Knowledge {
 	//this function add a node in database  done!
 	@Override
 	public boolean addNode(String domain, String path, String xpath, String content) {
-
+		long nodeId = 0, urlId = 0;
 		boolean result = false;
-
+		
+		LOG.info( "adding domain:"+domain+" path:"+path+" xpath:"+xpath );
 		checkConnection();
 		try {
 
-			if( null == psSelect ) {
-			//	psSelect = conn.prepareStatement( "INSERT INTO pages (host,xpath,hash,frequency,content,path) VALUES (?, ?, ?, 1, ?, ?);" );
-
-				psSelect = conn.prepareStatement( "INSERT INTO pages (host,xpath,hash,frequency) VALUES (?, ?, ?, 1);" );
+			if( null == psNode ) {
+				psNode = conn.prepareStatement( 
+					"INSERT INTO nodes (host,xpath,hash) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+					, Statement.RETURN_GENERATED_KEYS
+				);
 			}
 
-			psSelect.setString(1,domain);
-			psSelect.setString(2,xpath);
-			psSelect.setInt(3, content.hashCode());
-			//psSelect.setString(4,content);
-			//psSelect.setString(4,path);
+			psNode.setString(1,domain);
+			psNode.setString(2,xpath);
+			psNode.setInt(3, content.hashCode());
+			
+			nodeId = psNode.executeUpdate();			
+			LOG.info( "nodeId:"+nodeId );
+			incCounter();
+			
+			if( null == psUrl ) {
+				psUrl = conn.prepareStatement( 
+					"INSERT INTO urls (host,path) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+					, Statement.RETURN_GENERATED_KEYS
+				);
+			}
 
-			psSelect.executeUpdate();
-			result = true;
+			psUrl.setString(1,domain);
+			psUrl.setString(2,path);
+			
+			urlId = psUrl.executeUpdate();    
+			LOG.info( "urlId:"+urlId );
+			incCounter();
+			
+			if( null == psFrequency ) {
+				psFrequency = conn.prepareStatement( "INSERT IGNORE INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+			}
+
+			psFrequency.setLong( 1, nodeId );
+			psFrequency.setLong( 2, urlId );
+			
+			psFrequency.executeUpdate();    
 			
 			incCounter();
+			
+			result = true;
 		} catch( java.sql.SQLIntegrityConstraintViolationException e ) {
 
-			//LOG.info( "Got SQLIntegrity exception assume node already exist hash:" + xpath );
-			result = false; // Redundant
+			LOG.error( "Got SQLIntegrity exception assume node already exist hash:" + xpath );
+			return result;
 
 		}catch( java.sql.BatchUpdateException e ) {
-
-			//LOG.info( "alireza, Got BatchUpdateException exception assume node already exist hash:" + xpath );
-
-			result = false; // Redundant
+			LOG.error( "alireza, Got BatchUpdateException exception assume node already exist hash:" + xpath );
+			return result;
 
 		} catch (SQLException e) {
 			// TODO check for existing node is part of normal operation and not an error
 			LOG.error( "Exception while adding a new node:", e );
+			return result;
 		}
 
 		return result;
@@ -171,29 +175,6 @@ public class ConnectMysql implements Knowledge {
 	public boolean incNodeFreq(String domain, String xpath, int hash) {
 
 		boolean result = false;
-
-		checkConnection();
-		try {
-
-			if( null == psUpdate ) {
-				psUpdate = conn.prepareStatement( "update pages set frequency=frequency+1  where host= ? and xpath= ? and hash= ? ;" );
-			}
-
-			psUpdate.setString(1,domain);
-			psUpdate.setString(2,xpath);
-			psUpdate.setInt(3,hash);
-
-			psUpdate.executeUpdate();
-
-			result = true;
-			
-			incCounter();
-
-		} catch (SQLException e) {
-			LOG.error( "Exception while increasing the frequency:", e );
-		}
-
-
 		return result;
 	}
 
@@ -207,17 +188,17 @@ public class ConnectMysql implements Knowledge {
 		checkConnection();
 		try {	
 
-			psSelect=conn.prepareStatement( "SELECT frequency FROM pages where host=? and xpath=? and hash=?;" );
-			psSelect.setString(1,domain);
-			psSelect.setString(2, xpath);
-			psSelect.setInt(3,content.hashCode());
+			psGetFrequency=conn.prepareStatement( "SELECT count(url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host=? AND xpath=? AND hash=? ;" );
+			psGetFrequency.setString(1,domain);
+			psGetFrequency.setString(2, xpath);
+			psGetFrequency.setInt(3,content.hashCode());
 
-			ResultSet rs=psSelect.executeQuery();
+			ResultSet rs=psGetFrequency.executeQuery();
 
 			if(rs.next()) {
-				result = rs.getInt("frequency");
+				result = rs.getInt( 0 );
 			}else{
-				LOG.debug( "cant find " + xpath + " node in database. and content is: "+ content );
+				LOG.debug( "Node " + xpath + " is not in database. and content is: "+ content );
 			}
 			
 			incCounter();

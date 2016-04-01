@@ -99,34 +99,7 @@ public class SolrIndexWriter implements IndexWriter {
 
 	public void write(NutchDocument doc) throws IOException {
 		final SolrInputDocument inputDoc = new SolrInputDocument();
-		//this part added by alireza pasha
 		
-		
-		
-
-		 /*
-		//parsing the web page
-		LOG.info("kaveh, the SolrIndex class write function called");
-		ParsingPart nodeParse=new ParsingPart();
-
-		//assign the value of frequency from nutch-site to the variable in parsingpart class 
-		ParsingPart.frequency_threshould=schema_2locos_frequency_threshould;
-		LOG.info("kaveh, the value of schema_2locos_frequency_threshould is : "+ schema_2locos_frequency_threshould );
-
-		//parsing web page
-		Node nodePage=nodeParse.parseDom(doc.getFieldValue("content").toString());
-		LOG.info("Kaveh, the page  extract from nutch documents as a content after parsing is  :  "+nodePage);
-
-		//compare web page with database
-		String textContent=nodeParse.compareKB(nodePage, "html/body",doc.getFieldValue("host").toString());
-		LOG.info("kaveh it is "+doc.getFieldValue("url")+"the final parse : "+textContent);
-	
- */
-
-
-
-
-
 		for (final Entry<String, NutchField> e : doc) {
 			LOG.info( "key:"+e.getKey() );
 			for (final Object val : e.getValue().getValues()) {

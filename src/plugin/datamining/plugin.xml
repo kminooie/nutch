@@ -43,10 +43,10 @@
 
       <implementation id="TrainingPart"
                       class="com.doslocos.nutch.datamining.TrainingPart">
-        <!-- 
+      
         <parameter name="contentType" value="text/html|application/xhtml+xml"/>
-        <parameter name="pathSuffix" value=""/>
-        -->
+        <!--parameter name="pathSuffix" value=""/-->
+      
       </implementation>
 
    </extension>
@@ -57,10 +57,10 @@
 
       <implementation id="IndexingPart"
                       class="com.doslocos.nutch.datamining.IndexingPart">
-        <!--
+        
         <parameter name="contentType" value="text/html|application/xhtml+xml"/>
-        <parameter name="pathSuffix" value=""/>
-        -->
+        <!--parameter name="pathSuffix" value=""/-->
+       
       </implementation>
 
    </extension>

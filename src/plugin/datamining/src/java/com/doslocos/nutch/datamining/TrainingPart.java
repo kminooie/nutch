@@ -35,16 +35,16 @@ public class TrainingPart implements HtmlParseFilter{
 	public static URL netUrl;
 	public static String HTMLBody;
 
-	public TrainingPart() {
-
-	}
+//	public TrainingPart() {
+//
+//	}
 
 
 
 	@Override
 	public ParseResult filter(Content content, ParseResult parseResult, HTMLMetaTags metaTags, DocumentFragment doc) {
 
-
+		ConnectMysql2.resetCounter();
 
 		//to extract the content of a page
 		String HTMLBody = new String(content.getContent());
@@ -65,6 +65,7 @@ public class TrainingPart implements HtmlParseFilter{
 		metadata.add( "rawcontent", HTMLBody );
 
 		LOG.debug("datamining tarining part finished for : "+content.getUrl());
+		LOG.info( "number of db roundtrip:" + ConnectMysql2.getCounter() );
 		return parseResult;
 
 	}

@@ -14,7 +14,7 @@ public class ParsingText {
 	public static String Host_2locos_tariningpart;
 	public static int frequency_threshould ;
 
-	public static ConnectMysql conn1;
+	public static Knowledge conn1;
 
 	public static final Logger LOG = LoggerFactory.getLogger(ParsingText.class);
 
@@ -23,14 +23,35 @@ public class ParsingText {
 	public ParsingText(String schema2locos,String host2locos,String pass2locos,String user2locos){
 
 
-		conn1=new ConnectMysql(schema2locos,host2locos,pass2locos,user2locos);
+		conn1=new ConnectMysql2(schema2locos,host2locos,pass2locos,user2locos);
 
+
+	}
+
+	//this function traverses a node and put them in database
+	public void makeDatabase(Node node,String xpath,String host, String path) {
+		//put the node in database
+
+		try{
+			boolean nodeExist=conn1.addIncNode(host,path, xpath, node.toString());
+
+			if (node.childNodeSize()> 0&& nodeExist){
+
+				for (int childrennum=0;childrennum<node.childNodeSize();childrennum++){
+					makeDatabase(node.childNode(childrennum),xpath+"/"+xpathMaker(node.childNode(childrennum)),host,path);
+				}
+
+			}
+		}catch(Exception e){
+			LOG.error("Error happened during calling the children :"+xpath);
+
+		}
 
 	}
 
 
 
-
+	/*the old one
 	//this function traverses a node and put them in database
 	public void makeDatabase(Node node,String xpath,String host, String path) {
 		//put the node in database
@@ -53,7 +74,7 @@ public class ParsingText {
 		}
 
 	}
-
+	 */
 
 
 	//this function make an xpath for the nodes  done!
