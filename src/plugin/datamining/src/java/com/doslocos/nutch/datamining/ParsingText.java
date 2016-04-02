@@ -1,96 +1,83 @@
 package com.doslocos.nutch.datamining;
 
+import org.apache.hadoop.conf.Configuration;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ParsingText {
-	public static String Schema_2locos_tariningpart;
-	public static String USER_2locos_tariningpart ;
-	public static String PASS_2locos_tariningpart;
-	public static String Host_2locos_tariningpart;
-	public static int frequency_threshould ;
-
-	public static Knowledge conn1;
+	
+	private int frequency_threshould ;
+	private Knowledge conn1;
+	private String selector;
 
 	public static final Logger LOG = LoggerFactory.getLogger(ParsingText.class);
 
 
 	//constructor of class
-	public ParsingText(String schema2locos,String host2locos,String pass2locos,String user2locos){
-
-
-		conn1=new ConnectMysql2(schema2locos,host2locos,pass2locos,user2locos);
-
-
-	}
-	
-	//add url and host to database and extract the urlID from it
-	public long addUrlHost(String hostName, String pathName){
+	public ParsingText(Configuration conf){
+		frequency_threshould = Integer.parseInt( conf.get( "doslocos.training.frequency_threshould" ) );
+		selector = conf.get(
+			"doslocos.training.selector",
+			"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
+		);
 		
-		long urlID=0;
+		conn1 = new ConnectMysql( conf );
+	}
+
+
+	public boolean learn( String HTMLBody, String host, String path ) {
+		boolean result = false;
+		Knowledge.counter = 0;
 		
-		urlID=conn1.addUrlHostDb(hostName, pathName);
-				
-		return urlID;
-	}
-	
-	
-
-	//this function traverses a node and put them in database
-	public void makeDatabase(Node node,String xpath,String host, String path,long tempUrlId) {
-		//put the node in database
-
 		try{
-			boolean nodeExist=conn1.addIncNode(host,path, xpath, node.toString(),tempUrlId);
+			Node pageNode;
+			pageNode = parseDom( HTMLBody );
 
-			if (node.childNodeSize()> 0&& nodeExist){
+			int hostId = conn1.getHostId( host );
+			int pathId = conn1.getPathId( hostId, path );
 
-				for (int childrennum=0;childrennum<node.childNodeSize();childrennum++){
-					makeDatabase(node.childNode(childrennum),xpath+"/"+xpathMaker(node.childNode(childrennum)),host,path,tempUrlId);
-				}
+			readNode( pageNode, "html/body", pathId, hostId );
 
-			}
-		}catch(Exception e){
-			LOG.error("Error happened during calling the children :"+xpath);
-
+			result=true;
+		}catch( Exception e ){
+			LOG.error( "Exception while parsingFunction " + e );
 		}
+
+		LOG.info( "number of db roundtrip:" + Knowledge.counter );
+		
+		return result;
 
 	}
 
 
-
-	/*the old one
-	//this function traverses a node and put them in database
-	public void makeDatabase(Node node,String xpath,String host, String path) {
-		//put the node in database
-		try{
-			conn1.addIncNode(host,path, xpath, node.toString());
-		} catch (Exception e) {
-			LOG.error("Error happened during adding a node to database: "+xpath);
-		}
-		try{
-			if (node.childNodeSize()>0){
-
-				for (int childrennum=0;childrennum<node.childNodeSize();childrennum++){
-					makeDatabase(node.childNode(childrennum),xpath+"/"+xpathMaker(node.childNode(childrennum)),host,path);
-				}
-
-			}
-		}catch(Exception e){
-			LOG.error("Error happened during calling the children :"+xpath);
-
-		}
+	public String filter( String rawcontent, String host ) {
+		Knowledge.counter = 0;
+		int hostId = conn1.getHostId( host );
+		Node nodePage = parseDom( rawcontent );
+		
+		//compare web page with database
+		String resutl = checkNode(nodePage, "html/body", hostId );
+		LOG.info( "number of db roundtrip while filtering:" + Knowledge.counter );
+		return resutl;
+	}
+		
+	//change a string to a DOM and return a node
+	private Node parseDom( String page_content ) {
+		Document doc = Jsoup.parse( page_content );
+		doc.select( selector ).remove();
+		Elements ele = doc.getElementsByTag( "body" );
+		Node node1 = ele.get( 0 );
+		return node1;
 
 	}
-	 */
-
 
 	//this function make an xpath for the nodes  done!
-	public static String xpathMaker(Node node){
+	private static String xpathMaker(Node node){
 
 		int fre=1;
 		Node ft=node;
@@ -110,49 +97,8 @@ public class ParsingText {
 	}
 
 
-	//change a string to a DOM and return a node
-	public Node parseDom (String page_content){
-		Document doc = Jsoup.parse(page_content);
-		doc.select("script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden").remove();
-		Elements ele=doc.getElementsByTag("body");
-		Node node1=ele.get(0);
-		return node1;
-
-	}
-
-
-
-	//use compareKB_new
-	public static String compareKB(Node node_1, String xpath, String domain){
-		String content="";
-		int freq = 0;
-		freq = conn1.getNodeFreq( domain, xpath, node_1.toString() );
-
-		if ( freq > frequency_threshould){
-			//assign value 1 to a node whom exists in database
-			//Do not nothing because the frequency more than threshold and you must skip it
-
-
-		} else {
-			content=extractText(node_1);
-			if (node_1.childNodeSize() > 0 ) {
-
-				for (int i1=0;i1<node_1.childNodeSize();i1++){
-					String newXpath=xpath+"/"+xpathMaker(node_1.childNode(i1));
-					content=content+" "+compareKB(node_1.childNode(i1),newXpath,domain);
-
-				}
-
-			}
-		}
-		return content.trim();
-
-	}
-
-
-
 	//this function extract the text exist in each nodes 
-	public static String extractText(Node node){
+	private static String extractText(Node node){
 		String string1="";
 		if (node.hasAttr("text")){
 			string1=node.attr("text").replaceAll("\\s+", " ").trim();
@@ -161,5 +107,36 @@ public class ParsingText {
 		return string1;	
 	}
 
-}
 
+	private void readNode(Node node,String xpath,int pathId, int hostId) {
+
+		try{
+			boolean nodeExist = conn1.addNode( hostId, pathId, node.toString().hashCode(), xpath );
+
+			if( nodeExist && node.childNodeSize() > 0 ) {
+				for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
+					readNode( node.childNode( i ), xpath+"/"+xpathMaker( node.childNode( i ) ), pathId, hostId );
+				}
+			}
+		}catch(Exception e){
+			LOG.error("Error happened during calling the children :"+xpath);
+		}
+	}
+
+	private String checkNode( Node node, String xpath, int hostId ) {
+		String content = "";
+		int freq = conn1.getNodeFreq( hostId, node.toString().hashCode(), xpath );
+		
+		if( freq < frequency_threshould ) {
+			content = extractText( node );
+			
+			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){
+				String newXpath = xpath + "/" + xpathMaker( node.childNode( i ) );
+				content = content + " " + checkNode( node.childNode( i ), newXpath, hostId );
+			}		
+		}
+		
+		return content.trim();
+	}
+
+}

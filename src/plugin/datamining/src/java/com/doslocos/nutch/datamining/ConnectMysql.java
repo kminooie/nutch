@@ -5,84 +5,41 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class ConnectMysql implements Knowledge {
+public class ConnectMysql extends Knowledge {
 
-	@Override
-	public boolean incNodeFreq(String host, String xpath, int hash) throws SQLException {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public int getNodeFreq(String domain, String xpath, String content) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public long addUrlHostDb(String hostName, String pathName) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public boolean addIncNode(String domain, String path, String xpath, String content, long tempUrlId) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public boolean addNode(String domain, String path, String xpath, String content, long tempUrlId) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-
-/*
-	public static String Schema_2locos_tariningpart;
-	public static String USER_2locos_tariningpart ;
-	public static String PASS_2locos_tariningpart;
-	public static String Host_2locos_tariningpart;
+	private static String SCHEMA;
+	private static String USER;
+	private static String PASS;
+	private static String DBHOST;
 
 	private static Connection conn = null;
-	public static  PreparedStatement psSelect = null;
-	public static  PreparedStatement psInsert = null;
-	public static  PreparedStatement psUpdate = null;
+	private static  PreparedStatement psHost, psNode, psUrl, psFrequency, psGetFrequency;
+	private ResultSet tempRs = null;
+
+	private static final Map< String, Integer > hostIds = new ConcurrentHashMap< String , Integer>();
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
 	
-	public int counter = 0;
-	
-	public void resetCounter() {
-		counter = 0;
-	}
-	
-	public void incCounter() {
-		++counter;
-	}
-	
-	public int getCounter() {
-		return counter;
-	}
-
 	//constructor 
-	public ConnectMysql(String schema2locos,String host2locos,String pass2locos,String user2locos){
-		// TODO read db credentials from nutch conf object 
-
-		Schema_2locos_tariningpart=schema2locos;
-		USER_2locos_tariningpart =user2locos;
-		PASS_2locos_tariningpart=pass2locos;
-		Host_2locos_tariningpart=host2locos;
-
+	public ConnectMysql( Configuration conf ) {
+		DBHOST = conf.get("doslocos.training.database.host");
+		SCHEMA = conf.get("doslocos.training.database.schema");
+		USER = conf.get("doslocos.training.database.username");
+		PASS = conf.get("doslocos.training.database.password");
+		
 		LOG.debug("Connection class called");
 		initConnection( false );
 	}
-
 
 	private static void checkConnection() {
 		boolean renew = false;
@@ -94,14 +51,16 @@ public class ConnectMysql implements Knowledge {
 		}
 
 		if( renew ) {
-			renew = initConnection( true );
-			LOG.info("kaveh, checkConnection called initConnection");
-
+			renew = ! initConnection( true );
+			LOG.debug( "Renewed database connection.");
 		}
 
-		if( ! renew ) {
-			// TODO die here
+		if( renew ) {
+			LOG.error( "Unable to renew the database connection." );
+			// die here
 		}
+		
+		++counter;
 	}
 
 	private static boolean initConnection( boolean force ) {
@@ -109,8 +68,8 @@ public class ConnectMysql implements Knowledge {
 			try {
 				LOG.debug("Connection to database stablished");
 				Class.forName("org.mariadb.jdbc.Driver");
-				String sqlConnection="jdbc:mysql://"+Host_2locos_tariningpart+"/"+Schema_2locos_tariningpart;
-				conn = DriverManager.getConnection(sqlConnection, USER_2locos_tariningpart, PASS_2locos_tariningpart);
+				String sqlConnection="jdbc:mysql://" + DBHOST + "/" + SCHEMA;
+				conn = DriverManager.getConnection(sqlConnection, USER, PASS );
 			} catch( Exception e ) {
 				LOG.error( "Failed to establish connection:", e );
 				return false;
@@ -121,150 +80,152 @@ public class ConnectMysql implements Knowledge {
 	}
 
 
-
 	@Override
-	public boolean addIncNode(String domain, String path, String xpath, String content) {
+	public int getHostId( String domain ) {
+		Integer result = 0;
 
-		boolean result = addNode( domain, path, xpath, content ); 
+		result = hostIds.get( domain );
+		if( null == result ) {
+			checkConnection();
+			try {
+				if( null == psHost ) {
+					psHost = conn.prepareStatement( 
+							"INSERT INTO hosts ( domain ) VALUES ( ? ) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+							, Statement.RETURN_GENERATED_KEYS
+							);
+				}
 
-		if( ! result ) {
-			incNodeFreq( domain, xpath, content.hashCode() );
+				psHost.setString(1,domain);
+				psHost.executeUpdate();
+				tempRs = psHost.getGeneratedKeys();
 
-		}
-
-		return result;
-		//result = false means node increased
-		//result = true means node added
-
-
-
-
-		/*
-		boolean result = addNode( domain, path, xpath, content ); 
-
-		if( ! result ) {
-			result = incNodeFreq( domain, xpath, content.hashCode() );
-		}
-
-		return result;
-	
-	}
-
-
-
-	//this function add a node in database  done!
-	@Override
-	public boolean addNode(String domain, String path, String xpath, String content) {
-
-		boolean result = false;
-
-		checkConnection();
-		try {
-
-			if( null == psSelect ) {
-			//	psSelect = conn.prepareStatement( "INSERT INTO pages (host,xpath,hash,frequency,content,path) VALUES (?, ?, ?, 1, ?, ?);" );
-
-				psSelect = conn.prepareStatement( "INSERT INTO pages (host,xpath,hash,frequency) VALUES (?, ?, ?, 1);" );
+				if( tempRs.next()) {
+					result = tempRs.getInt( 1 );
+					hostIds.put( domain, result );
+				}else{
+					LOG.error( "Unable to get the genrated node Id back" );
+				}
+			} catch( Exception e ) {
+				LOG.error( "Exception while inserting new host:", e );
 			}
-
-			psSelect.setString(1,domain);
-			psSelect.setString(2,xpath);
-			psSelect.setInt(3, content.hashCode());
-			//psSelect.setString(4,content);
-			//psSelect.setString(4,path);
-
-			psSelect.executeUpdate();
-			result = true;
-			
-			incCounter();
-		} catch( java.sql.SQLIntegrityConstraintViolationException e ) {
-
-			//LOG.info( "Got SQLIntegrity exception assume node already exist hash:" + xpath );
-			result = false; // Redundant
-
-		}catch( java.sql.BatchUpdateException e ) {
-
-			//LOG.info( "alireza, Got BatchUpdateException exception assume node already exist hash:" + xpath );
-
-			result = false; // Redundant
-
-		} catch (SQLException e) {
-			// TODO check for existing node is part of normal operation and not an error
-			LOG.error( "Exception while adding a new node:", e );
 		}
 
 		return result;
 	}
 
-
-
-	//just increase the frequency field of a node  done!
 	@Override
-	public boolean incNodeFreq(String domain, String xpath, int hash) {
-
-		boolean result = false;
-
-		checkConnection();
-		try {
-
-			if( null == psUpdate ) {
-				psUpdate = conn.prepareStatement( "update pages set frequency=frequency+1  where host= ? and xpath= ? and hash= ? ;" );
-			}
-
-			psUpdate.setString(1,domain);
-			psUpdate.setString(2,xpath);
-			psUpdate.setInt(3,hash);
-
-			psUpdate.executeUpdate();
-
-			result = true;
-			
-			incCounter();
-
-		} catch (SQLException e) {
-			LOG.error( "Exception while increasing the frequency:", e );
-		}
-
-
-		return result;
-	}
-
-
-
-	@Override
-	public int getNodeFreq( String domain,String xpath, String content ) {
+	public int getPathId( int hostId, String path ) {
 		int result = 0;
 
+		checkConnection();
+		try {
+
+			if( null == psUrl ) {
+				psUrl = conn.prepareStatement( 
+						"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+						, Statement.RETURN_GENERATED_KEYS
+						);
+			}
+
+			psUrl.setInt(1, hostId );
+			psUrl.setString(2,path);
+			psHost.executeUpdate();
+			tempRs = psHost.getGeneratedKeys();
+
+			if( tempRs.next()) {
+				result = tempRs.getInt( 1 );
+			}else{
+				LOG.error( "Unable to get the genrated url Id back" );
+			}
+		} catch( Exception e ) {
+			LOG.error( "Exception while inserting new host:", e );
+		}
+
+		return result;
+	}
+
+	@Override
+	public boolean addNode( int hostId, int pathId, int hash, String xpath ) {
+		boolean result = false;
+		long nodeId = 0;
+		
+		checkConnection();
+		++counter;
+		try {
+
+			if( null == psNode ) {
+				psNode = conn.prepareStatement( 
+						"INSERT INTO nodes ( host_id, hash, xpath ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+						, Statement.RETURN_GENERATED_KEYS
+						);
+			}
+
+			if( null == psFrequency ) {
+				psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+			}
+
+			psNode.setInt( 1, hostId );
+			psNode.setInt( 2, hash );
+			psNode.setString( 3, xpath);
+
+			psNode.executeUpdate();
+
+			tempRs = psNode.getGeneratedKeys();
+
+			if( tempRs.next()) {
+				nodeId = tempRs.getLong( 1 );
+			}else{
+				// TODO die here
+				LOG.error( "Unable to get the node genrated Id back" );
+			}
+
+			psFrequency.setLong( 1, nodeId );
+			psFrequency.setInt( 2, pathId );			
+			
+			try {
+				psFrequency.executeUpdate();
+				result = true;
+			} catch( java.sql.SQLIntegrityConstraintViolationException e ) {
+				LOG.info( "The node "+nodeId + " alredy exist in page:" + pathId );
+			}
+			
+		} catch (SQLException e) {
+			// TODO check for existing node is part of normal operation and not an error
+			// TODO die here
+			LOG.error( "Exception while adding a new node:", e );
+		}
+		
+		return result;
+	}
+
+	@Override
+	public int getNodeFreq( int hostId, int hash, String xpath ) {
+		int result = 0;
 
 		checkConnection();
 		try {	
 
-			psSelect=conn.prepareStatement( "SELECT frequency FROM pages where host=? and xpath=? and hash=?;" );
-			psSelect.setString(1,domain);
-			psSelect.setString(2, xpath);
-			psSelect.setInt(3,content.hashCode());
+			psGetFrequency=conn.prepareStatement( 
+					"SELECT count(url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath=? ;" 
+					);
+			psGetFrequency.setInt( 1, hostId );
+			psGetFrequency.setInt( 2, hash );
+			psGetFrequency.setString(3, xpath);
 
-			ResultSet rs=psSelect.executeQuery();
+			tempRs = psGetFrequency.executeQuery();
 
-			if(rs.next()) {
-				result = rs.getInt("frequency");
+			if( tempRs.next() ) {
+				result = tempRs.getInt( 1 );
 			}else{
-				LOG.debug( "cant find " + xpath + " node in database. and content is: "+ content );
+				LOG.debug( "Node " + xpath + " from host:" +hostId + " with hash code:"+ hash +" is not in database." );
 			}
-			
-			incCounter();
 
 		} catch (SQLException e) {
-
-			LOG.error("Except During compare a node with database :"+xpath+"  "+e);
-
+			LOG.error("Exception while getting node frequency: "+e);
 		}
-
 
 		return result;
 	}
-
-
 
 	//use this function to check the connection at the end and if the connections were open this function close them.
 
@@ -280,24 +241,6 @@ public class ConnectMysql implements Knowledge {
 		}
 	}
 
-	@Override
-	public long addUrlHostDb(String hostName, String pathName) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 
-	@Override
-	public boolean addIncNode(String domain, String path, String xpath, String content, long tempUrlId) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public boolean addNode(String domain, String path, String xpath, String content, long tempUrlId) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-*/
 }
 
