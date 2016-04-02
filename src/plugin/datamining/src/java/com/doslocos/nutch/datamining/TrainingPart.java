@@ -3,6 +3,9 @@ package com.doslocos.nutch.datamining;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.nutch.metadata.Metadata;
 import org.apache.nutch.parse.HTMLMetaTags;
@@ -34,10 +37,12 @@ public class TrainingPart implements HtmlParseFilter{
 	public static Node node;
 	public static URL netUrl;
 	public static String HTMLBody;
+	public static Map<Long , String> url_ID;
+	public long tempUrlId ;
 
-//	public TrainingPart() {
-//
-//	}
+	//	public TrainingPart() {
+	//
+	//	}
 
 
 
@@ -59,7 +64,17 @@ public class TrainingPart implements HtmlParseFilter{
 
 		}
 
-		kbc.makeDatabase( node, "html/body", netUrl.getHost(), netUrl.getPath() );
+		//this part added recently
+
+		tempUrlId =kbc.addUrlHost(netUrl.getHost(), netUrl.getPath());
+		
+		url_ID = new HashMap<Long, String>();
+		if (url_ID.containsValue(netUrl.getHost()+netUrl.getPath())){
+		url_ID.put(tempUrlId, netUrl.getHost()+netUrl.getPath());
+		}
+		
+		
+		kbc.makeDatabase( node, "html/body", netUrl.getHost(), netUrl.getPath(), tempUrlId);
 		Parse parse = parseResult.get(content.getUrl());
 		Metadata metadata = parse.getData().getParseMeta();
 		metadata.add( "rawcontent", HTMLBody );

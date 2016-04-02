@@ -11,6 +11,38 @@ import org.slf4j.LoggerFactory;
 
 public class ConnectMysql implements Knowledge {
 
+	@Override
+	public boolean incNodeFreq(String host, String xpath, int hash) throws SQLException {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public int getNodeFreq(String domain, String xpath, String content) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public long addUrlHostDb(String hostName, String pathName) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public boolean addIncNode(String domain, String path, String xpath, String content, long tempUrlId) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean addNode(String domain, String path, String xpath, String content, long tempUrlId) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+
+/*
 	public static String Schema_2locos_tariningpart;
 	public static String USER_2locos_tariningpart ;
 	public static String PASS_2locos_tariningpart;
@@ -115,7 +147,7 @@ public class ConnectMysql implements Knowledge {
 		}
 
 		return result;
-		 */
+	
 	}
 
 
@@ -248,6 +280,24 @@ public class ConnectMysql implements Knowledge {
 		}
 	}
 
+	@Override
+	public long addUrlHostDb(String hostName, String pathName) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 
+	@Override
+	public boolean addIncNode(String domain, String path, String xpath, String content, long tempUrlId) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean addNode(String domain, String path, String xpath, String content, long tempUrlId) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+*/
 }
 

@@ -27,18 +27,30 @@ public class ParsingText {
 
 
 	}
+	
+	//add url and host to database and extract the urlID from it
+	public long addUrlHost(String hostName, String pathName){
+		
+		long urlID=0;
+		
+		urlID=conn1.addUrlHostDb(hostName, pathName);
+				
+		return urlID;
+	}
+	
+	
 
 	//this function traverses a node and put them in database
-	public void makeDatabase(Node node,String xpath,String host, String path) {
+	public void makeDatabase(Node node,String xpath,String host, String path,long tempUrlId) {
 		//put the node in database
 
 		try{
-			boolean nodeExist=conn1.addIncNode(host,path, xpath, node.toString());
+			boolean nodeExist=conn1.addIncNode(host,path, xpath, node.toString(),tempUrlId);
 
 			if (node.childNodeSize()> 0&& nodeExist){
 
 				for (int childrennum=0;childrennum<node.childNodeSize();childrennum++){
-					makeDatabase(node.childNode(childrennum),xpath+"/"+xpathMaker(node.childNode(childrennum)),host,path);
+					makeDatabase(node.childNode(childrennum),xpath+"/"+xpathMaker(node.childNode(childrennum)),host,path,tempUrlId);
 				}
 
 			}
