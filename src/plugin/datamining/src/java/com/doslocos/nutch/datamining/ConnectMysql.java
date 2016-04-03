@@ -110,37 +110,52 @@ public class ConnectMysql extends Knowledge {
 			}
 		}
 
+		LOG.debug( "Got id:" + result + " for host:" + domain );
 		return result;
 	}
 
 	@Override
 	public int getPathId( int hostId, String path ) {
 		int result = 0;
+		
+		if( null == path ) {
+			LOG.debug( "path is null" );
+			path = "/";
+		}
+
+		if( "" == path ) {
+			LOG.debug( "path is empty" );
+			path = "/";
+		}		
+
+		LOG.debug( "hostId:" + hostId + " path:" + path );
 
 		checkConnection();
 		try {
 
 			if( null == psUrl ) {
 				psUrl = conn.prepareStatement( 
-						"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
-						, Statement.RETURN_GENERATED_KEYS
-						);
+					"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+					, Statement.RETURN_GENERATED_KEYS
+				);
 			}
 
-			psUrl.setInt(1, hostId );
-			psUrl.setString(2,path);
-			psHost.executeUpdate();
-			tempRs = psHost.getGeneratedKeys();
+			psUrl.setInt( 1, hostId );
+			psUrl.setString( 2, path );
+			psUrl.executeUpdate();
+			ResultSet tempRs = psUrl.getGeneratedKeys();
 
 			if( tempRs.next()) {
 				result = tempRs.getInt( 1 );
 			}else{
 				LOG.error( "Unable to get the genrated url Id back" );
 			}
+
 		} catch( Exception e ) {
 			LOG.error( "Exception while inserting new host:", e );
 		}
 
+		LOG.debug( "Returning id:" + result + " for path:" + path );
 		return result;
 	}
 
@@ -185,8 +200,9 @@ public class ConnectMysql extends Knowledge {
 			try {
 				psFrequency.executeUpdate();
 				result = true;
-			} catch( java.sql.SQLIntegrityConstraintViolationException e ) {
-				LOG.info( "The node "+nodeId + " alredy exist in page:" + pathId );
+			} catch( java.sql.BatchUpdateException e ) {
+			//catch( java.sql.SQLIntegrityConstraintViolationException e ) {
+				LOG.debug( "The node "+nodeId + " alredy exist in page:" + pathId );
 			}
 			
 		} catch (SQLException e) {

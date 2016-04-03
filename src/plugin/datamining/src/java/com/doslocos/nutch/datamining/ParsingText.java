@@ -77,7 +77,7 @@ public class ParsingText {
 	}
 
 	//this function make an xpath for the nodes  done!
-	private static String xpathMaker(Node node){
+	private static String xpathMaker( Node node ) {
 
 		int fre=1;
 		Node ft=node;
@@ -98,7 +98,7 @@ public class ParsingText {
 
 
 	//this function extract the text exist in each nodes 
-	private static String extractText(Node node){
+	private static String extractText( Node node ) {
 		String string1="";
 		if (node.hasAttr("text")){
 			string1=node.attr("text").replaceAll("\\s+", " ").trim();
@@ -108,10 +108,14 @@ public class ParsingText {
 	}
 
 
-	private void readNode(Node node,String xpath,int pathId, int hostId) {
+	private void readNode( Node node, String xpath, int pathId, int hostId ) {
+		int hash = node.toString().hashCode();
+
+		// empty node, ignored
+		if( 32 == hash ) return;
 
 		try{
-			boolean nodeExist = conn1.addNode( hostId, pathId, node.toString().hashCode(), xpath );
+			boolean nodeExist = conn1.addNode( hostId, pathId, hash, xpath );
 
 			if( nodeExist && node.childNodeSize() > 0 ) {
 				for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
@@ -124,8 +128,13 @@ public class ParsingText {
 	}
 
 	private String checkNode( Node node, String xpath, int hostId ) {
+		int hash = node.toString().hashCode();
 		String content = "";
-		int freq = conn1.getNodeFreq( hostId, node.toString().hashCode(), xpath );
+
+		// empty node, ignored
+		if( 32 == hash ) return content;
+
+		int freq = conn1.getNodeFreq( hostId, hash, xpath );
 		
 		if( freq < frequency_threshould ) {
 			content = extractText( node );

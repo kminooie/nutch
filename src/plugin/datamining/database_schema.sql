@@ -1,9 +1,20 @@
-use knowledge_base;
+SET @UserName = 'dmuser';
+SET @PassWord = 'dmpass';
+SET @DBName = 'knowledge_base';
 
-drop table `hosts`;
-drop table `urls`;
-drop table `nodes`;
-drop table `frequency`;
+
+CREATE SCHEMA IF NOT EXISTS knowledge_base CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+GRANT ALL  ON knowledge_base.* TO 'dmuser'@'%' IDENTIFIED BY 'dmpass';
+
+FLUSH PRIVILEGES;
+
+USE knowledge_base;
+
+DROP TABLE IF EXISTS `hosts`;
+DROP TABLE IF EXISTS `urls`;
+DROP TABLE IF EXISTS `nodes`;
+DROP TABLE IF EXISTS `frequency`;
 
 
 CREATE TABLE `hosts` (
