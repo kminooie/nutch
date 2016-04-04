@@ -38,7 +38,8 @@ public class ConnectMysql extends Knowledge {
 		PASS = conf.get("doslocos.training.database.password");
 		
 		LOG.debug("Connection class called");
-		initConnection( false );
+	//	initConnection( false );
+		initConnection( true );
 	}
 
 	private static void checkConnection() {
