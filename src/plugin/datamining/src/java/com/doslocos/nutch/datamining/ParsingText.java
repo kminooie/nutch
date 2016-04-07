@@ -50,7 +50,7 @@ public class ParsingText {
 			LOG.error( "Exception while parsingFunction " + e );
 		}
 
-		LOG.info( "number of db roundtrip:" + Knowledge.counter );
+		LOG.debug( "number of db roundtrip:" + Knowledge.counter );
 
 		return result;
 	}
@@ -98,7 +98,7 @@ public class ParsingText {
 
 		//compare web page with database
 		String result = checkNode(nodePage, "html/body", hostId );
-		LOG.info( "number of db roundtrip while filtering:" + Knowledge.counter );
+		LOG.debug( "number of db roundtrip while filtering:" + Knowledge.counter );
 		return result;
 	}
 	

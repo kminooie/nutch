@@ -29,7 +29,7 @@ public class ConnectJedis extends Knowledge{
 
 		boolean result = false;
 
-
+		counter++;
 		String NodeID = getNodeId( hashcode , hostId , xpathId );
 
 		try{
@@ -63,10 +63,10 @@ public class ConnectJedis extends Knowledge{
 		if( NodeID != null ){
 
 			freq = jedis.scard(NodeID).intValue();
+			counter++;
 
 		}
 		
-		LOG.info("the frequency of : "+NodeID+" is :"+freq);
 
 		return freq;
 	}
@@ -89,7 +89,7 @@ public class ConnectJedis extends Knowledge{
 			LOG.error( "there is an error during connect to database" + e);
 			//the program must be killed here
 		}
-		LOG.info(" Connect Jedis is stablished!");
+		LOG.debug(" Connect Jedis is stablished!");
 
 
 		return result;
@@ -106,6 +106,7 @@ public class ConnectJedis extends Knowledge{
 		if (host_ID == null ){
 
 			result = host.hashCode();
+			counter++;
 
 			jedis.set( host, Integer.toString( result ) );
 
@@ -114,7 +115,6 @@ public class ConnectJedis extends Knowledge{
 			result = Integer.parseInt( ( host_ID ) );
 		}
 
-		LOG.info("the HostID of : "+host+" is : "+result);
 
 
 		return result;
@@ -133,6 +133,7 @@ public class ConnectJedis extends Knowledge{
 		if ( path_ID == null ){
 
 			result = path.hashCode();
+			counter++;
 
 			jedis.set( path , Integer.toString( result ) );
 
@@ -141,7 +142,6 @@ public class ConnectJedis extends Knowledge{
 			result = Integer.parseInt( ( path_ID ) );
 		}
 
-		LOG.info("the PathID of : "+path+" is : "+result);
 
 		
 		return result;
@@ -160,6 +160,7 @@ public class ConnectJedis extends Knowledge{
 		if ( xpath_ID == null ){
 
 			result = xpath.hashCode();
+			counter++;
 
 			jedis.set( xpath , Integer.toString( result ) );
 
@@ -168,7 +169,6 @@ public class ConnectJedis extends Knowledge{
 			result = Integer.parseInt( ( xpath_ID ) );
 		}
 
-		LOG.info("the XpathID of : "+xpath+" is : "+result);
 
 		
 		return result;
@@ -189,13 +189,13 @@ public class ConnectJedis extends Knowledge{
 
 			nodeId = Integer.toString((
 					Integer.toString( hash ) + Integer.toString( host_ID ) + Integer.toString( xpath_ID ) ).hashCode()) ;
+			counter++;
 
 			jedis.set( nodeKey,Integer.toString( nodeKey.hashCode() ) );
 
 			nodeId = Integer.toString( nodeKey.hashCode() );
 		}
 
-		LOG.info("the NodeID of : "+nodeKey+" is : "+nodeId);
 
 		
 		return nodeId;
