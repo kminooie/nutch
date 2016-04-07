@@ -14,8 +14,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class ConnectMysql extends Knowledge {
+public class ConnectMysql  {
 
+	/*
 	private static String SCHEMA;
 	private static String USER;
 	private static String PASS;
@@ -258,6 +259,6 @@ public class ConnectMysql extends Knowledge {
 		}
 	}
 
-
+*/
 }
 
