@@ -14,9 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class ConnectMysql  {
+public class ConnectMysql extends Knowledge {
 
-	
 	private static String SCHEMA;
 	private static String USER;
 	private static String PASS;
@@ -39,8 +38,7 @@ public class ConnectMysql  {
 		PASS = conf.get("doslocos.training.database.password");
 		
 		LOG.debug("Connection class called");
-	//	initConnection( false );
-		initConnection( true );
+		initConnection( false );
 	}
 
 	private static void checkConnection() {
@@ -62,7 +60,7 @@ public class ConnectMysql  {
 			// die here
 		}
 		
-
+		++counter;
 	}
 
 	private static boolean initConnection( boolean force ) {
@@ -82,7 +80,7 @@ public class ConnectMysql  {
 	}
 
 
-	
+	@Override
 	public int getHostId( String domain ) {
 		Integer result = 0;
 
@@ -116,7 +114,7 @@ public class ConnectMysql  {
 		return result;
 	}
 
-	
+	@Override
 	public int getPathId( int hostId, String path ) {
 		int result = 0;
 		
@@ -161,13 +159,13 @@ public class ConnectMysql  {
 		return result;
 	}
 
-	
+	@Override
 	public boolean addNode( int hostId, int pathId, int hash, String xpath ) {
 		boolean result = false;
 		long nodeId = 0;
 		
 		checkConnection();
-		
+		++counter;
 		try {
 
 			if( null == psNode ) {
@@ -216,7 +214,7 @@ public class ConnectMysql  {
 		return result;
 	}
 
-	
+	@Override
 	public int getNodeFreq( int hostId, int hash, String xpath ) {
 		int result = 0;
 

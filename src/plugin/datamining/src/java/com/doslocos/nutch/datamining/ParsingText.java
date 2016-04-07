@@ -10,11 +10,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ParsingText {
-
+	
 	private int frequency_threshould ;
-	//private Knowledge conn1;
+	private Knowledge conn1;
 	private String selector;
-	private Knowledge connJedis;
+
 	public static final Logger LOG = LoggerFactory.getLogger(ParsingText.class);
 
 
@@ -22,86 +22,51 @@ public class ParsingText {
 	public ParsingText(Configuration conf){
 		frequency_threshould = Integer.parseInt( conf.get( "doslocos.training.frequency_threshould" ) );
 		selector = conf.get(
-				"doslocos.training.selector",
-				"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
-				);
-
-		//	conn1 = new ConnectMysql( conf );
-		connJedis =new ConnectJedis(conf);
+			"doslocos.training.selector",
+			"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
+		);
+		
+		// conn1 = new ConnectMysql( conf );
+		conn1 = new ConnectRedis( conf );
 	}
+
 
 	public boolean learn( String HTMLBody, String host, String path ) {
 		boolean result = false;
 		Knowledge.counter = 0;
-
+		
 		try{
 			Node pageNode;
-			
 			pageNode = parseDom( HTMLBody );
 
-			int hostId = connJedis.getHostId( host );
-			int pathId = connJedis.getPathId( path );
+			int hostId = conn1.getHostId( host );
+			int pathId = conn1.getPathId( hostId, path );
 
-			readNode( pageNode, "html/body", pathId , hostId );
+			readNode( pageNode, "html/body", pathId, hostId );
 
-			result = true;
-
+			result=true;
 		}catch( Exception e ){
 			LOG.error( "Exception while parsingFunction " + e );
 		}
 
-		LOG.debug( "number of db roundtrip:" + Knowledge.counter );
-
+		LOG.info( "number of db roundtrip:" + Knowledge.counter );
+		
 		return result;
+
 	}
 
-//	public boolean learn( String HTMLBody, String host, String path ) {
-//		boolean result = false;
-//		Knowledge.counter = 0;
-//
-//		try{
-//			Node pageNode;
-//			pageNode = parseDom( HTMLBody );
-//
-//			int hostId = conn1.getHostId( host );
-//			int pathId = conn1.getPathId( hostId, path );
-//
-//			readNode( pageNode, "html/body", pathId, hostId );
-//
-//			result=true;
-//		}catch( Exception e ){
-//			LOG.error( "Exception while parsingFunction " + e );
-//		}
-//
-//		LOG.info( "number of db roundtrip:" + Knowledge.counter );
-//
-//		return result;
-//
-//	}
-
-
-//	public String filter( String rawcontent, String host ) {
-//		Knowledge.counter = 0;
-//		int hostId = conn1.getHostId( host );
-//		Node nodePage = parseDom( rawcontent );
-//
-//		//compare web page with database
-//		String resutl = checkNode(nodePage, "html/body", hostId );
-//		LOG.info( "number of db roundtrip while filtering:" + Knowledge.counter );
-//		return resutl;
-//	}
 
 	public String filter( String rawcontent, String host ) {
 		Knowledge.counter = 0;
-		int hostId = connJedis.getHostId( host );
+		int hostId = conn1.getHostId( host );
 		Node nodePage = parseDom( rawcontent );
-
+		
 		//compare web page with database
-		String result = checkNode(nodePage, "html/body", hostId );
-		LOG.debug( "number of db roundtrip while filtering:" + Knowledge.counter );
-		return result;
+		String resutl = checkNode(nodePage, "html/body", hostId );
+		LOG.info( "number of db roundtrip while filtering:" + Knowledge.counter );
+		return resutl;
 	}
-	
+		
 	//change a string to a DOM and return a node
 	private Node parseDom( String page_content ) {
 		Document doc = Jsoup.parse( page_content );
@@ -112,7 +77,7 @@ public class ParsingText {
 
 	}
 
-	//this function make an Xpath for the nodes  done!
+	//this function make an xpath for the nodes  done!
 	private static String xpathMaker( Node node ) {
 
 		int fre=1;
@@ -150,12 +115,10 @@ public class ParsingText {
 		// empty node, ignored
 		if( 32 == hash ) return;
 
-		int xpathId = connJedis.getXpathId( xpath ) ;
-		
 		try{
-			boolean nodeExist = connJedis.addNode( hash, hostId, pathId,  xpathId );
+			boolean nodeExist = conn1.addNode( hostId, pathId, hash, xpath );
 
-			if( !nodeExist && node.childNodeSize() > 0 ) {
+			if( nodeExist && node.childNodeSize() > 0 ) {
 				for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 					readNode( node.childNode( i ), xpath+"/"+xpathMaker( node.childNode( i ) ), pathId, hostId );
 				}
@@ -163,8 +126,6 @@ public class ParsingText {
 		}catch(Exception e){
 			LOG.error("Error happened during calling the children :"+xpath);
 		}
-		
-		
 	}
 
 	private String checkNode( Node node, String xpath, int hostId ) {
@@ -174,20 +135,17 @@ public class ParsingText {
 		// empty node, ignored
 		if( 32 == hash ) return content;
 
-		int xpathId = connJedis.getXpathId( xpath ) ;
-
+		int freq = conn1.getNodeFreq( hostId, hash, xpath );
 		
-		int freq = connJedis.readFreqNode(  hash, hostId, xpathId );
-
 		if( freq < frequency_threshould ) {
 			content = extractText( node );
-
+			
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){
 				String newXpath = xpath + "/" + xpathMaker( node.childNode( i ) );
 				content = content + " " + checkNode( node.childNode( i ), newXpath, hostId );
 			}		
 		}
-
+		
 		return content.trim();
 	}
 
