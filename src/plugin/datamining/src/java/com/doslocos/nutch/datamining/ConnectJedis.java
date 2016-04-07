@@ -46,7 +46,6 @@ public class ConnectJedis extends Knowledge{
 			LOG.error( "error while adding a node in database" );
 		}
 
-		LOG.info("the node with  "+NodeID+ " id add to database and it existed in database :"+result);
 
 		return result;
 	}
