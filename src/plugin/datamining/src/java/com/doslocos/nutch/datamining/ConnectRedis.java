@@ -1,9 +1,12 @@
 package com.doslocos.nutch.datamining;
 
+
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 public class ConnectRedis extends Knowledge {
 
@@ -14,30 +17,54 @@ public class ConnectRedis extends Knowledge {
 	public static int dbNum;
 
 	public static Jedis jedis;
-
+	public static JedisPool pool;
+	
 	public ConnectRedis(Configuration conf){
 
-		hostAdd = conf.get("doslocos.training.redisDb.urlConnection");
-		dbNum = Integer.parseInt(conf.get("doslocos.training.redisDb.dbNum"));
-		initConnection(hostAdd, dbNum);
+		if( null == pool) {
+			hostAdd = conf.get("doslocos.training.redisDb.urlConnection");
+			dbNum = Integer.parseInt(conf.get("doslocos.training.redisDb.dbNum", "0" ) );
+			JedisPoolConfig poolConfig = new JedisPoolConfig();
+			poolConfig.setMaxTotal( 128 ); // maximum active connections
+			poolConfig.setMaxIdle( 64 );  // maximum idle connections
+						
+			pool = new JedisPool( poolConfig, hostAdd );			
+		}
+		
+		initConnection();
+	}
+
+
+	protected void finalize(){
+		if( null != jedis ) {
+			try {
+				jedis.close();
+			} catch ( Exception e ) {
+				LOG.error( "Exception whild closing the jedis connection.", e );
+			}
+			jedis = null;
+		}
 	}
 
 	
 	//connect to database
-	private static boolean initConnection( String hostAdd , int dbNum ){
+	private boolean initConnection() {
 
 		boolean result = false ;
 
 		try{
+			
+			if( null == jedis || ! jedis.isConnected() ) {
+				jedis= pool.getResource(); 
+				jedis.select( dbNum );
 
-			jedis=new Jedis( hostAdd );
-			jedis.select( dbNum );
-
+			}
+			
 			result = true ;
-
+			
 		}catch( Exception e ){
 
-			LOG.error( "there is an error during connect to database" + e);
+			LOG.error( "there is an error during connect to database", e );
 			//the program must be killed here
 		}
 		LOG.debug(" Connect Jedis is established!");
@@ -103,19 +130,23 @@ public class ConnectRedis extends Knowledge {
 		
 		String nodeKey = Integer.toString( hash ) + "_" + Integer.toString( hostId ) + "_" + xpathHashCode;
 		
-		String nodeId = Integer.toString( nodeKey.hashCode() );
+//		String nodeId = Integer.toString( nodeKey.hashCode() );
+//		
+//		String oldNodeId = jedis.getSet( nodeKey, nodeId ); 
+//		
+//		if( null == oldNodeId ) {
+//			result = true;
+//		} else if( ! oldNodeId.equals( nodeId ) ) {
+//			LOG.error( "Same node detected with diferent hash code old:" + oldNodeId + " new:" + nodeId );
+//		}	
 		
-		String oldNodeId = jedis.getSet( nodeKey, nodeId ); 
-		
-		if( null == oldNodeId ) {
+//		jedis.sadd( nodeId, Integer.toString( pathId ));
+		if( 1 == jedis.sadd( nodeKey, Integer.toString( pathId ) ) ) {
 			result = true;
-		} if( oldNodeId != nodeId ) {
-			LOG.error( "Same node detected with diferent hash code old:" + oldNodeId + " new:" + nodeId );
-		}	
-		
-		jedis.sadd( nodeId, Integer.toString( pathId ));
+		}
 
-		counter += 2;
+
+		counter += 1;
 
 		return result;
 	}
@@ -128,10 +159,12 @@ public class ConnectRedis extends Knowledge {
 		
 		String nodeKey = Integer.toString( hash ) + "_" + Integer.toString( hostId ) + "_" + xpathHashCode;
 		
-		String nodeId = Integer.toString( nodeKey.hashCode() );
+//		String nodeId = Integer.toString( nodeKey.hashCode() );
 
 		
-		freq = jedis.scard( nodeId ).intValue();
+//		freq = jedis.scard( nodeId ).intValue();
+		freq = jedis.scard( nodeKey ).intValue();
+
 		counter++;
 
 		return freq;

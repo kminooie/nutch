@@ -26,8 +26,22 @@ public class ParsingText {
 			"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
 		);
 		
+		String cn = conf.get( "doslocos.training.storage.class", "com.doslocos.nutch.datamining.ConnectRedis" );
+        LOG.info( "Using: " + cn + " for storage" );
+				
 		// conn1 = new ConnectMysql( conf );
-		conn1 = new ConnectRedis( conf );
+	// conn1 = new ConnectRedis( conf );
+
+        try {
+			 Class<?> implClass = Class.forName( cn );
+        
+			// (Knowledge) implClass.newInstance();
+			conn1 = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
+
+		} catch( Exception e ) {
+			LOG.error( "Got exception while loading storage class: ", e );
+		}
+		
 	}
 
 
@@ -49,7 +63,7 @@ public class ParsingText {
 			LOG.error( "Exception while parsingFunction " + e );
 		}
 
-		LOG.info( "number of db roundtrip:" + Knowledge.counter );
+		LOG.info( "number of db roundtrip while learning:" + Knowledge.counter );
 		
 		return result;
 
@@ -57,14 +71,18 @@ public class ParsingText {
 
 
 	public String filter( String rawcontent, String host ) {
+		LOG.info("alirezaaa1");
 		Knowledge.counter = 0;
 		int hostId = conn1.getHostId( host );
+		LOG.info("alirezaaa2"+hostId);
+
 		Node nodePage = parseDom( rawcontent );
-		
+		LOG.info("alirezaaa3");
+
 		//compare web page with database
-		String resutl = checkNode(nodePage, "html/body", hostId );
+		String result = checkNode(nodePage, "html/body", hostId );
 		LOG.info( "number of db roundtrip while filtering:" + Knowledge.counter );
-		return resutl;
+		return result;
 	}
 		
 	//change a string to a DOM and return a node
@@ -124,7 +142,7 @@ public class ParsingText {
 				}
 			}
 		}catch(Exception e){
-			LOG.error("Error happened during calling the children :"+xpath);
+			LOG.error("Error happened during calling the children :"+xpath +" ", e);
 		}
 	}
 
