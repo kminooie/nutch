@@ -5,10 +5,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.nutch.metadata.Metadata;
 import org.apache.nutch.parse.HTMLMetaTags;
 import org.apache.nutch.parse.HtmlParseFilter;
-import org.apache.nutch.parse.Parse;
 import org.apache.nutch.parse.ParseResult;
 import org.apache.nutch.protocol.Content;
 import org.w3c.dom.DocumentFragment;
@@ -39,11 +37,13 @@ public class TrainingPart implements HtmlParseFilter{
 		}
 				
 
-		//pass the content to indexing
-		Parse parse = parseResult.get(content.getUrl());
-		Metadata metadata = parse.getData().getParseMeta();
-		metadata.add( "rawcontent", HTMLBody );
+		//old way to pass the content to indexing
+//		Parse parse = parseResult.get(content.getUrl());
+//		Metadata metadata = parse.getData().getParseMeta();
+//		metadata.add( "rawcontent", HTMLBody );
 
+		parseResult.get(content.getUrl()).getData().getParseMeta().add("rawcontent", HTMLBody );
+		
 		LOG.debug("datamining tarining part finished for : "+content.getUrl());
 		return parseResult;
 	}

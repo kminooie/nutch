@@ -10,81 +10,96 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ParsingText {
-	
-	private int frequency_threshould ;
-	private Knowledge conn1;
-	private String selector;
 
+	private int frequency_threshould ;
+	private String selector;
+	private int hostId, pathId ;
+	
+	private String connClassName ;
+	private Configuration conf ;
 	public static final Logger LOG = LoggerFactory.getLogger(ParsingText.class);
 
 
 	//constructor of class
 	public ParsingText(Configuration conf){
-		frequency_threshould = Integer.parseInt( conf.get( "doslocos.training.frequency_threshould" ) );
+
+		frequency_threshould = Integer.parseInt( conf.get( "doslocos.training.frequency_threshould" , "com.doslocos.nutch.datamining.ConnectRedis") );
 		selector = conf.get(
-			"doslocos.training.selector",
-			"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
-		);
-		
-		String cn = conf.get( "doslocos.training.storage.class", "com.doslocos.nutch.datamining.ConnectRedis" );
-        LOG.info( "Using: " + cn + " for storage" );
-				
+				"doslocos.training.selector",
+				"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
+				);
+
 		// conn1 = new ConnectMysql( conf );
-	// conn1 = new ConnectRedis( conf );
-
-        try {
-			 Class<?> implClass = Class.forName( cn );
-        
-			// (Knowledge) implClass.newInstance();
-			conn1 = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
-
-		} catch( Exception e ) {
-			LOG.error( "Got exception while loading storage class: ", e );
-		}
+		//	 conn1 = new ConnectRedis( conf );
+		this.conf = conf;
+		connClassName = conf.get( "doslocos.training.storage.class" );
 		
+		LOG.debug( "Using: " + connClassName + " for storage" );
+
 	}
 
 
 	public boolean learn( String HTMLBody, String host, String path ) {
 		boolean result = false;
-		Knowledge.counter = 0;
+		Knowledge k = null;
+		
+		try {
+			Class<?> implClass = Class.forName( connClassName );
+			// (Knowledge) implClass.newInstance();
+			k = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
+		} catch( Exception e ) {
+			LOG.error( "Got exception while loading storage class: ", e );
+		}
+		k.counter = 0;
+		
 		
 		try{
 			Node pageNode;
 			pageNode = parseDom( HTMLBody );
+			
+			hostId = k.getHostId( host );
+			pathId = k.getPathId( hostId, path );
+			//			hostId=host.hashCode();
+			//			pathId=path.hashCode();
 
-			int hostId = conn1.getHostId( host );
-			int pathId = conn1.getPathId( hostId, path );
 
-			readNode( pageNode, "html/body", pathId, hostId );
+			readNode( k, pageNode, "html/body", pathId, hostId );
 
 			result=true;
 		}catch( Exception e ){
-			LOG.error( "Exception while parsingFunction " + e );
+			LOG.error( "Exception while parsingFunction " + hostId + "   " + pathId, e );
 		}
 
-		LOG.info( "number of db roundtrip while learning:" + Knowledge.counter );
-		
+		LOG.debug( "number of db roundtrip while learning:" + k.counter +"  "+host+path);
+
 		return result;
 
 	}
 
 
 	public String filter( String rawcontent, String host ) {
-		LOG.info("alirezaaa1");
-		Knowledge.counter = 0;
-		int hostId = conn1.getHostId( host );
-		LOG.info("alirezaaa2"+hostId);
+		Knowledge k = null;
+		
+		try {
+			Class<?> implClass = Class.forName( connClassName );
+			// (Knowledge) implClass.newInstance();
+			k = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
+		} catch( Exception e ) {
+			LOG.error( "Got exception while loading storage class: ", e );
+		}
+		k.counter = 0;
+		
+		//int hostId = conn1.getHostId( host );
+		hostId=host.hashCode();
 
 		Node nodePage = parseDom( rawcontent );
-		LOG.info("alirezaaa3");
 
 		//compare web page with database
-		String result = checkNode(nodePage, "html/body", hostId );
-		LOG.info( "number of db roundtrip while filtering:" + Knowledge.counter );
+		String result = checkNode( k, nodePage, "html/body", hostId );
+		LOG.debug( "number of db roundtrip while filtering: " + k.counter + " ,url : "+ host);
 		return result;
 	}
-		
+
 	//change a string to a DOM and return a node
 	private Node parseDom( String page_content ) {
 		Document doc = Jsoup.parse( page_content );
@@ -127,43 +142,46 @@ public class ParsingText {
 	}
 
 
-	private void readNode( Node node, String xpath, int pathId, int hostId ) {
+	private void readNode( Knowledge k, Node node, String xpath, int pathId, int hostId ) {
 		int hash = node.toString().hashCode();
-
+		boolean nodeExist = true;
 		// empty node, ignored
 		if( 32 == hash ) return;
 
 		try{
-			boolean nodeExist = conn1.addNode( hostId, pathId, hash, xpath );
+			nodeExist = k.addNode( hostId, pathId, hash, xpath );
 
-			if( nodeExist && node.childNodeSize() > 0 ) {
-				for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
-					readNode( node.childNode( i ), xpath+"/"+xpathMaker( node.childNode( i ) ), pathId, hostId );
-				}
-			}
 		}catch(Exception e){
-			LOG.error("Error happened during calling the children :"+xpath +" ", e);
+
+			LOG.debug("Error happened during add a node :"+xpath +"   "+hostId+"   "+ pathId+"   "+ hash, e);
 		}
+
+		if( nodeExist && node.childNodeSize() > 0 ) {
+
+			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
+				readNode( k, node.childNode( i ), xpath+"/"+xpathMaker( node.childNode( i ) ), pathId, hostId );
+			}
+		}
+
 	}
 
-	private String checkNode( Node node, String xpath, int hostId ) {
+	private String checkNode( Knowledge k, Node node, String xpath, int hostId ) {
 		int hash = node.toString().hashCode();
 		String content = "";
 
 		// empty node, ignored
 		if( 32 == hash ) return content;
 
-		int freq = conn1.getNodeFreq( hostId, hash, xpath );
-		
+		int freq = k.getNodeFreq( hostId, hash, xpath );
 		if( freq < frequency_threshould ) {
 			content = extractText( node );
-			
+
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){
 				String newXpath = xpath + "/" + xpathMaker( node.childNode( i ) );
-				content = content + " " + checkNode( node.childNode( i ), newXpath, hostId );
+				content = content + " " + checkNode( k, node.childNode( i ), newXpath, hostId );
 			}		
 		}
-		
+
 		return content.trim();
 	}
 

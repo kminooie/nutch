@@ -22,7 +22,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.nutch.parse.Outlink;
 import org.apache.nutch.util.NodeWalker;

@@ -2,6 +2,31 @@
 
 <configuration>
 <property>
+ <name>doslocos.training.frequency_threshould</name>
+ <value>2</value>
+ <description>its the frequency that divided nodes as common nodes and unique nodes
+ </description>
+</property>
+
+<!--
+<property>
+ <name>doslocos.training.selector</name>
+ <value>script,style,option,input,form,meta,input,select,appserver,button,comment,#comment,#text,noscript,server,timestamp,.hidden</value>
+ <description>html node and ids and classes that would be ignored. refer to org.jsoup.Jsoup
+ </description>
+</property>
+-->
+<property>
+ <name>doslocos.training.storage.class</name>
+ <value>com.doslocos.nutch.datamining.ConnectRedis</value>
+ <description>
+ for mysql : com.doslocos.nutch.datamining.ConnectMysql
+ for redis : com.doslocos.nutch.datamining.ConnectRedis  
+ </description>
+</property>
+
+<!-- mysql database authentication -->
+<property>
  <name>doslocos.training.database.host</name>
  <value>mydbmaster.dev</value>
  <description> its database host address</description>
@@ -23,17 +48,23 @@
 
 <property>
  <name>doslocos.training.database.schema</name>
- <value>KnowledgeBase</value>
+ <value>knowledge_base</value>
  <description>its the name of your database in the sql
  </description>
 </property>
 
-
+<!-- configuration for Redis Database -->
+<property>
+ <name>doslocos.training.redisDb.urlConnection</name>
+ <value>srv3.office</value>
+ <description>its database url connection for Redis. you must change it base of the local of your Redis database
+ </description>
+</property>
 
 <property>
- <name>doslocos.frequency.threshould</name>
- <value>2</value>
- <description>its the frequency that divided nodes as common nodes and unique nodes
+ <name>doslocos.training.redisDb.dbNum</name>
+ <value>15</value>
+ <description>its the number of your database in Redis
  </description>
 </property>
 

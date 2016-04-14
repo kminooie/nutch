@@ -60,7 +60,7 @@ public class ConnectMysql extends Knowledge {
 			// die here
 		}
 		
-		++counter;
+		
 	}
 
 	private static boolean initConnection( boolean force ) {
@@ -87,6 +87,7 @@ public class ConnectMysql extends Knowledge {
 		result = hostIds.get( domain );
 		if( null == result ) {
 			checkConnection();
+			++counter;
 			try {
 				if( null == psHost ) {
 					psHost = conn.prepareStatement( 
@@ -131,6 +132,7 @@ public class ConnectMysql extends Knowledge {
 		LOG.debug( "hostId:" + hostId + " path:" + path );
 
 		checkConnection();
+		++counter;
 		try {
 
 			if( null == psUrl ) {
@@ -165,7 +167,7 @@ public class ConnectMysql extends Knowledge {
 		long nodeId = 0;
 		
 		checkConnection();
-		++counter;
+		counter += 2;
 		try {
 
 			if( null == psNode ) {
@@ -219,6 +221,7 @@ public class ConnectMysql extends Knowledge {
 		int result = 0;
 
 		checkConnection();
+		++counter;
 		try {	
 
 			psGetFrequency=conn.prepareStatement( 
@@ -257,6 +260,9 @@ public class ConnectMysql extends Knowledge {
 		}
 	}
 
+	public static void testMe() {
+		LOG.info( "test me was called." );
+	}
 
 }
 
