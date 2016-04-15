@@ -26,7 +26,6 @@ public class TrainingPart implements HtmlParseFilter{
 	@Override
 	public ParseResult filter(Content content, ParseResult parseResult, HTMLMetaTags metaTags, DocumentFragment doc) {
 
-		//to extract the content of a page
 		String HTMLBody = new String(content.getContent());
 
 		try {
@@ -36,11 +35,6 @@ public class TrainingPart implements HtmlParseFilter{
 			LOG.error("Error while extracting url from content", e );
 		}
 				
-
-		//old way to pass the content to indexing
-//		Parse parse = parseResult.get(content.getUrl());
-//		Metadata metadata = parse.getData().getParseMeta();
-//		metadata.add( "rawcontent", HTMLBody );
 
 		parseResult.get(content.getUrl()).getData().getParseMeta().add("rawcontent", HTMLBody );
 		

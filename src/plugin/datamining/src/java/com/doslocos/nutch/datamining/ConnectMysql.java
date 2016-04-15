@@ -30,7 +30,6 @@ public class ConnectMysql extends Knowledge {
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
 	
-	//constructor 
 	public ConnectMysql( Configuration conf ) {
 		DBHOST = conf.get("doslocos.training.database.host");
 		SCHEMA = conf.get("doslocos.training.database.schema");
@@ -246,7 +245,6 @@ public class ConnectMysql extends Knowledge {
 		return result;
 	}
 
-	//use this function to check the connection at the end and if the connections were open this function close them.
 
 	protected void finalize(){
 		if (conn != null) {
@@ -260,9 +258,7 @@ public class ConnectMysql extends Knowledge {
 		}
 	}
 
-	public static void testMe() {
-		LOG.info( "test me was called." );
-	}
+	
 
 }
 

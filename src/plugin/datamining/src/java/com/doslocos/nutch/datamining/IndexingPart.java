@@ -22,7 +22,6 @@ public class IndexingPart implements IndexingFilter {
 	public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
 			CrawlDatum datum, Inlinks inlinks) throws IndexingException  {
 
-		//parsing web page
 		String textContent = nodeParse.filter( parse.getData().getParseMeta().get("rawcontent"), doc.getFieldValue("host").toString() );
 
 		doc.removeField( "content" );

@@ -15,9 +15,9 @@ public class ConnectRedis extends Knowledge {
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectRedis.class );
 
-	private  String hostAdd; 
-	private  int redisPort, dbNumber, dbTimeOut, setMaxTotal, setMaxIdle;
-	private  boolean setTestOnBorrow, setTestOnReturn, setTestWhileIdle;
+	private static String hostAdd; 
+	private static int redisPort, dbNumber, dbTimeOut, setMaxTotal, setMaxIdle;
+	private static boolean setTestOnBorrow, setTestOnReturn, setTestWhileIdle;
 
 	public static JedisPool pool;
 	public static JedisPoolConfig poolConfig;
@@ -26,27 +26,26 @@ public class ConnectRedis extends Knowledge {
 
 	public ConnectRedis(Configuration conf){
 
-
-		hostAdd = conf.get( "doslocos.training.redisDb.urlConnection", "127.0.0.1" );
-		redisPort = conf.getInt( "doslocos.training.redisDb.portNumber", 6379 );
-		dbNumber = conf.getInt( "doslocos.training.redisDb.dbNumber", 0 );
-		dbTimeOut = conf.getInt( "doslocos.training.redisDb.dbTimeOut", 0 );
-		setTestOnBorrow = conf.getBoolean( "doslocos.training.redisDb.setTestOnBorrow", true );
-		setTestOnReturn = conf.getBoolean( "doslocos.training.redisDb.setTestOnReturn", true );
-		setTestWhileIdle = conf.getBoolean( "doslocos.training.redisDb.setTestWhileIdle", true );
-		setMaxTotal = conf.getInt( "doslocos.training.redisDb.setMaxTotal",0);
-		setMaxIdle = conf.getInt( "doslocos.training.redisDb.setMaxIdle",0);
-
-
 		if( null == poolConfig) {
+
+			hostAdd = conf.get( "doslocos.training.redisDb.urlConnection", "127.0.0.1" );
+			redisPort = conf.getInt( "doslocos.training.redisDb.portNumber", 6379 );
+			dbNumber = conf.getInt( "doslocos.training.redisDb.dbNumber", 0 );
+			dbTimeOut = conf.getInt( "doslocos.training.redisDb.dbTimeOut", 0 );
+			setTestOnBorrow = conf.getBoolean( "doslocos.training.redisDb.setTestOnBorrow", true );
+			setTestOnReturn = conf.getBoolean( "doslocos.training.redisDb.setTestOnReturn", true );
+			setTestWhileIdle = conf.getBoolean( "doslocos.training.redisDb.setTestWhileIdle", true );
+			setMaxTotal = conf.getInt( "doslocos.training.redisDb.setMaxTotal",0);
+			setMaxIdle = conf.getInt( "doslocos.training.redisDb.setMaxIdle",0);
+
 
 			poolConfig = new JedisPoolConfig();
 
 			poolConfig.setTestOnBorrow( setTestOnBorrow );
 			poolConfig.setTestOnReturn( setTestOnReturn );
 			poolConfig.setTestWhileIdle( setTestWhileIdle);
-			poolConfig.setMaxTotal( setMaxTotal ); // maximum active connections
-			poolConfig.setMaxIdle( setMaxIdle );  // maximum idle connections
+			poolConfig.setMaxTotal( setMaxTotal ); 
+			poolConfig.setMaxIdle( setMaxIdle );  
 
 			pool = new JedisPool( poolConfig, hostAdd, redisPort, dbTimeOut );	
 
@@ -56,7 +55,6 @@ public class ConnectRedis extends Knowledge {
 	}
 
 
-	//connect to database
 	private boolean initConnection() {
 		boolean result = false ;
 
@@ -64,7 +62,6 @@ public class ConnectRedis extends Knowledge {
 			if( null == jedis || ! jedis.isConnected() ) {
 				jedis = pool.getResource(); 
 				jedis.select( dbNumber );
-				LOG.info("connection established by redis!'");
 			}
 
 			result = true ;
@@ -72,7 +69,6 @@ public class ConnectRedis extends Knowledge {
 		}catch( Exception e ){
 
 			LOG.error( "there is an error during connect to database", e );
-			//the program must be killed here
 		}
 
 		LOG.debug( "initConnection is returnig:" + result );
@@ -148,17 +144,7 @@ public class ConnectRedis extends Knowledge {
 
 		String PathIdString = Integer.toString( pathId ) ;
 
-		//		String nodeId = Integer.toString( nodeKey.hashCode() );
-		//		
-		//		String oldNodeId = jedis.getSet( nodeKey, nodeId ); 
-		//		
-		//		if( null == oldNodeId ) {
-		//			result = true;
-		//		} else if( ! oldNodeId.equals( nodeId ) ) {
-		//			LOG.error( "Same node detected with diferent hash code old:" + oldNodeId + " new:" + nodeId );
-		//		}	
-
-		//		jedis.sadd( nodeId, Integer.toString( pathId ));
+	
 		int times = counter;
 
 		while( ! achived ) {
@@ -166,7 +152,7 @@ public class ConnectRedis extends Knowledge {
 
 				++counter;
 
-				int  freqPath = jedis.sadd( nodeKey, PathIdString).intValue();
+				int  freqPath = jedis.sadd( nodeKey.getBytes(), PathIdString.getBytes()).intValue();
 				if( 1 == freqPath ) {
 
 					result = true;
@@ -177,7 +163,7 @@ public class ConnectRedis extends Knowledge {
 			}catch(Exception e){
 
 				LOG.error("error happen here for :"+ nodeKey +" pathId is: "+ PathIdString+ " xpath is: "+ xpath+" result is " + result+"  "+ e );
-				
+
 
 				initConnection();
 				if( counter > times + 2 ) {
@@ -199,24 +185,21 @@ public class ConnectRedis extends Knowledge {
 
 		String nodeKey = Integer.toString( hash ) + "_" + Integer.toString( hostId ) + "_" + xpathHashCode;
 
-		//		String nodeId = Integer.toString( nodeKey.hashCode() );
-
-
-		//		freq = jedis.scard( nodeId ).intValue();
+	
 		try{
-			freq = jedis.scard( nodeKey ).intValue();
+			freq = jedis.scard( nodeKey.getBytes() ).intValue();
 
 		}catch(Exception e){
 
 			LOG.debug("error ocure during get node frequency"+"  ", e );
-		
+
 		}
 		counter++;
 
 		return freq;
 	}
 
-	
+
 	protected void finalize(){
 		if( null != jedis ) {
 			try {
@@ -228,9 +211,5 @@ public class ConnectRedis extends Knowledge {
 		}
 
 	}
-
-
-
-
 
 }
