@@ -29,13 +29,13 @@ public class ConnectMysql extends Knowledge {
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
-	
+
 	public ConnectMysql( Configuration conf ) {
 		DBHOST = conf.get("doslocos.training.database.host");
 		SCHEMA = conf.get("doslocos.training.database.schema");
 		USER = conf.get("doslocos.training.database.username");
 		PASS = conf.get("doslocos.training.database.password");
-		
+
 		LOG.debug("Connection class called");
 		initConnection( false );
 	}
@@ -58,8 +58,8 @@ public class ConnectMysql extends Knowledge {
 			LOG.error( "Unable to renew the database connection." );
 			// die here
 		}
-		
-		
+
+
 	}
 
 	private static boolean initConnection( boolean force ) {
@@ -81,82 +81,82 @@ public class ConnectMysql extends Knowledge {
 
 	@Override
 	public int getHostId( String domain ) {
-		Integer result = 0;
-
-		result = hostIds.get( domain );
-		if( null == result ) {
-			checkConnection();
-			++counter;
-			try {
-				if( null == psHost ) {
-					psHost = conn.prepareStatement( 
-							"INSERT INTO hosts ( domain ) VALUES ( ? ) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
-							, Statement.RETURN_GENERATED_KEYS
-							);
-				}
-
-				psHost.setString(1,domain);
-				psHost.executeUpdate();
-				tempRs = psHost.getGeneratedKeys();
-
-				if( tempRs.next()) {
-					result = tempRs.getInt( 1 );
-					hostIds.put( domain, result );
-				}else{
-					LOG.error( "Unable to get the genrated node Id back" );
-				}
-			} catch( Exception e ) {
-				LOG.error( "Exception while inserting new host:", e );
-			}
-		}
-
-		LOG.debug( "Got id:" + result + " for host:" + domain );
+		Integer result = domain.hashCode();
+		//
+		//		result = hostIds.get( domain );
+		//		if( null == result ) {
+		//			checkConnection();
+		//			++counter;
+		//			try {
+		//				if( null == psHost ) {
+		//					psHost = conn.prepareStatement( 
+		//							"INSERT INTO hosts ( domain ) VALUES ( ? ) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+		//							, Statement.RETURN_GENERATED_KEYS
+		//							);
+		//				}
+		//
+		//				psHost.setString(1,domain);
+		//				psHost.executeUpdate();
+		//				tempRs = psHost.getGeneratedKeys();
+		//
+		//				if( tempRs.next()) {
+		//					result = tempRs.getInt( 1 );
+		//					hostIds.put( domain, result );
+		//				}else{
+		//					LOG.error( "Unable to get the genrated node Id back" );
+		//				}
+		//			} catch( Exception e ) {
+		//				LOG.error( "Exception while inserting new host:", e );
+		//			}
+		//		}
+		//
+		//		LOG.debug( "Got id:" + result + " for host:" + domain );
 		return result;
 	}
 
 	@Override
 	public int getPathId( int hostId, String path ) {
-		int result = 0;
-		
-		if( null == path ) {
-			LOG.debug( "path is null" );
-			path = "/";
-		}
+		int result = path.hashCode();
 
-		if( "" == path ) {
-			LOG.debug( "path is empty" );
-			path = "/";
-		}		
-
-		LOG.debug( "hostId:" + hostId + " path:" + path );
-
-		checkConnection();
-		++counter;
-		try {
-
-			if( null == psUrl ) {
-				psUrl = conn.prepareStatement( 
-					"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
-					, Statement.RETURN_GENERATED_KEYS
-				);
-			}
-
-			psUrl.setInt( 1, hostId );
-			psUrl.setString( 2, path );
-			psUrl.executeUpdate();
-			ResultSet tempRs = psUrl.getGeneratedKeys();
-
-			if( tempRs.next()) {
-				result = tempRs.getInt( 1 );
-			}else{
-				LOG.error( "Unable to get the genrated url Id back" );
-			}
-
-		} catch( Exception e ) {
-			LOG.error( "Exception while inserting new host:", e );
-		}
-
-		LOG.debug( "Returning id:" + result + " for path:" + path );
+		//		if( null == path ) {
+		//			LOG.debug( "path is null" );
+		//			path = "/";
+		//		}
+		//
+		//		if( "" == path ) {
+		//			LOG.debug( "path is empty" );
+		//			path = "/";
+		//		}		
+		//
+		//		LOG.debug( "hostId:" + hostId + " path:" + path );
+		//
+		//		checkConnection();
+		//		++counter;
+		//		try {
+		//
+		//			if( null == psUrl ) {
+		//				psUrl = conn.prepareStatement( 
+		//					"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+		//					, Statement.RETURN_GENERATED_KEYS
+		//				);
+		//			}
+		//
+		//			psUrl.setInt( 1, hostId );
+		//			psUrl.setString( 2, path );
+		//			psUrl.executeUpdate();
+		//			ResultSet tempRs = psUrl.getGeneratedKeys();
+		//
+		//			if( tempRs.next()) {
+		//				result = tempRs.getInt( 1 );
+		//			}else{
+		//				LOG.error( "Unable to get the genrated url Id back" );
+		//			}
+		//
+		//		} catch( Exception e ) {
+		//			LOG.error( "Exception while inserting new host:", e );
+		//		}
+		//
+		//		LOG.debug( "Returning id:" + result + " for path:" + path );
 		return result;
 	}
 
@@ -164,7 +164,7 @@ public class ConnectMysql extends Knowledge {
 	public boolean addNode( int hostId, int pathId, int hash, String xpath ) {
 		boolean result = false;
 		long nodeId = 0;
-		
+
 		checkConnection();
 		counter += 2;
 		try {
@@ -176,42 +176,54 @@ public class ConnectMysql extends Knowledge {
 						);
 			}
 
-			if( null == psFrequency ) {
-				psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
-			}
-
 			psNode.setInt( 1, hostId );
 			psNode.setInt( 2, hash );
 			psNode.setString( 3, xpath);
 
 			psNode.executeUpdate();
-
+			result = true;
+			
 			tempRs = psNode.getGeneratedKeys();
 
 			if( tempRs.next()) {
 				nodeId = tempRs.getLong( 1 );
 			}else{
-				// TODO die here
+
 				LOG.error( "Unable to get the node genrated Id back" );
 			}
 
-			psFrequency.setLong( 1, nodeId );
-			psFrequency.setInt( 2, pathId );			
-			
-			try {
-				psFrequency.executeUpdate();
-				result = true;
-			} catch( java.sql.BatchUpdateException e ) {
-			//catch( java.sql.SQLIntegrityConstraintViolationException e ) {
-				LOG.debug( "The node "+nodeId + " alredy exist in page:" + pathId );
-			}
+		} catch (java.sql.BatchUpdateException e) {
+		//duplicate node added to database
 			
 		} catch (SQLException e) {
-			// TODO check for existing node is part of normal operation and not an error
-			// TODO die here
-			LOG.error( "Exception while adding a new node:", e );
+			
+			LOG.error("Error happen while adding a new node",e);
 		}
+
+
+
+		try {
+
+		if( null == psFrequency ) {
+			psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+		}
+
+		psFrequency.setLong( 1, nodeId );
+		psFrequency.setInt( 2, pathId );			
+
 		
+			psFrequency.executeUpdate();
+			result = true;
+		} catch( java.sql.BatchUpdateException e ) {
+			result = false;
+			//duplicate node added to database
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+
+
 		return result;
 	}
 
@@ -258,7 +270,7 @@ public class ConnectMysql extends Knowledge {
 		}
 	}
 
-	
+
 
 }
 

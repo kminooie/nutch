@@ -22,7 +22,7 @@ public class ParsingText {
 
 	public ParsingText(Configuration conf){
 
-		frequency_threshould = Integer.parseInt( conf.get( "doslocos.training.frequency_threshould" , "com.doslocos.nutch.datamining.ConnectRedis") );
+		frequency_threshould =  conf.getInt( "doslocos.training.frequency_threshould" , 2  );
 		selector = conf.get(
 				"doslocos.training.selector",
 				"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
@@ -30,7 +30,7 @@ public class ParsingText {
 
 	
 		this.conf = conf;
-		connClassName = conf.get( "doslocos.training.storage.class" );
+		connClassName = conf.get( "doslocos.training.storage.class", "com.doslocos.nutch.datamining.ConnectRedis" );
 		
 		LOG.debug( "Using: " + connClassName + " for storage" );
 

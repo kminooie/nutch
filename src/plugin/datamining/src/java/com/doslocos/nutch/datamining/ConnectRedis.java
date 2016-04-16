@@ -18,7 +18,7 @@ public class ConnectRedis extends Knowledge {
 	private static String hostAdd; 
 	private static int redisPort, dbNumber, dbTimeOut, setMaxTotal, setMaxIdle;
 	private static boolean setTestOnBorrow, setTestOnReturn, setTestWhileIdle;
-
+	private int frequency_treshold;
 	public static JedisPool pool;
 	public static JedisPoolConfig poolConfig;
 
@@ -38,6 +38,7 @@ public class ConnectRedis extends Knowledge {
 			setMaxTotal = conf.getInt( "doslocos.training.redisDb.setMaxTotal",0);
 			setMaxIdle = conf.getInt( "doslocos.training.redisDb.setMaxIdle",0);
 
+			frequency_treshold = conf.getInt( "doslocos.training.frequency_threshould" , 2  );
 
 			poolConfig = new JedisPoolConfig();
 
@@ -144,19 +145,23 @@ public class ConnectRedis extends Knowledge {
 
 		String PathIdString = Integer.toString( pathId ) ;
 
-	
+
 		int times = counter;
 
 		while( ! achived ) {
 			try{
 
-				++counter;
+				counter ++;
 
 				int  freqPath = jedis.sadd( nodeKey.getBytes(), PathIdString.getBytes()).intValue();
 				if( 1 == freqPath ) {
-
-					result = true;
-				}	
+					int freq = jedis.scard(nodeKey.getBytes()).intValue();
+					counter ++;
+					if(freq < (frequency_treshold+1)){
+						result=true;
+						
+					}
+				}
 
 
 				achived = true;
@@ -185,7 +190,7 @@ public class ConnectRedis extends Knowledge {
 
 		String nodeKey = Integer.toString( hash ) + "_" + Integer.toString( hostId ) + "_" + xpathHashCode;
 
-	
+
 		try{
 			freq = jedis.scard( nodeKey.getBytes() ).intValue();
 
