@@ -22,21 +22,20 @@ public class ConnectMysql extends Knowledge {
 	private static String DBHOST;
 
 	private static Connection conn = null;
-	private static  PreparedStatement psHost, psNode, psUrl, psFrequency, psGetFrequency;
+	private static  PreparedStatement psHost, psNode, psUrl, psFrequency, psGetFrequency, psgetfreq;
 	private ResultSet tempRs = null;
 
 	private static final Map< String, Integer > hostIds = new ConcurrentHashMap< String , Integer>();
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
-	
-	//constructor 
+
 	public ConnectMysql( Configuration conf ) {
 		DBHOST = conf.get("doslocos.training.database.host");
 		SCHEMA = conf.get("doslocos.training.database.schema");
 		USER = conf.get("doslocos.training.database.username");
 		PASS = conf.get("doslocos.training.database.password");
-		
+
 		LOG.debug("Connection class called");
 		initConnection( false );
 	}
@@ -59,8 +58,8 @@ public class ConnectMysql extends Knowledge {
 			LOG.error( "Unable to renew the database connection." );
 			// die here
 		}
-		
-		
+
+
 	}
 
 	private static boolean initConnection( boolean force ) {
@@ -118,7 +117,7 @@ public class ConnectMysql extends Knowledge {
 	@Override
 	public int getPathId( int hostId, String path ) {
 		int result = 0;
-		
+
 		if( null == path ) {
 			LOG.debug( "path is null" );
 			path = "/";
@@ -137,9 +136,9 @@ public class ConnectMysql extends Knowledge {
 
 			if( null == psUrl ) {
 				psUrl = conn.prepareStatement( 
-					"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
-					, Statement.RETURN_GENERATED_KEYS
-				);
+						"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+						, Statement.RETURN_GENERATED_KEYS
+						);
 			}
 
 			psUrl.setInt( 1, hostId );
@@ -163,27 +162,78 @@ public class ConnectMysql extends Knowledge {
 
 	@Override
 	public boolean addNode( int hostId, int pathId, int hash, String xpath ) {
+		//		boolean result = false;
+		//		long nodeId = 0;
+		//		
+		//		checkConnection();
+		//		counter += 2;
+		//		try {
+		//
+		//			if( null == psNode ) {
+		//				psNode = conn.prepareStatement( 
+		//						"INSERT INTO nodes ( host_id, hash, xpath ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+		//						, Statement.RETURN_GENERATED_KEYS
+		//						);
+		//			}
+		//
+		//			
+		//
+		//			psNode.setInt( 1, hostId );
+		//			psNode.setInt( 2, hash );
+		//			psNode.setString( 3, xpath);
+		//
+		//			psNode.executeUpdate();
+		//
+		//			tempRs = psNode.getGeneratedKeys();
+		//
+		//			if( tempRs.next()) {
+		//				nodeId = tempRs.getLong( 1 );
+		//			}else{
+		//				// TODO die here
+		//				LOG.error( "Unable to get the node genrated Id back" );
+		//			}
+		//
+		//			
+		//			if( null == psFrequency ) {
+		//				psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+		//			}
+		//			
+		//			psFrequency.setLong( 1, nodeId );
+		//			psFrequency.setInt( 2, pathId );			
+		//			
+		//			try {
+		//				psFrequency.executeUpdate();
+		//				result = true;
+		//			} catch( java.sql.BatchUpdateException e ) {
+		//			//catch( java.sql.SQLIntegrityConstraintViolationException e ) {
+		//				LOG.debug( "The node "+nodeId + " alredy exist in page:" + pathId );
+		//			}
+		//			
+		//		} catch (SQLException e) {
+		//			// TODO check for existing node is part of normal operation and not an error
+		//			// TODO die here
+		//			LOG.error( "Exception while adding a new node:", e );
+		//		}
+		//		
+		//		return result;
+
 		boolean result = false;
 		long nodeId = 0;
-		
-		checkConnection();
-		counter += 2;
+
+
 		try {
+			//add hash-host-xapth in nodes table and extract id3 from it
 
 			if( null == psNode ) {
 				psNode = conn.prepareStatement( 
-						"INSERT INTO nodes ( host_id, hash, xpath ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+						"INSERT INTO nodes ( host_id, hash, xpath_id ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
 						, Statement.RETURN_GENERATED_KEYS
 						);
 			}
 
-			if( null == psFrequency ) {
-				psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
-			}
-
 			psNode.setInt( 1, hostId );
 			psNode.setInt( 2, hash );
-			psNode.setString( 3, xpath);
+			psNode.setInt( 3, xpath.hashCode() );
 
 			psNode.executeUpdate();
 
@@ -196,57 +246,120 @@ public class ConnectMysql extends Knowledge {
 				LOG.error( "Unable to get the node genrated Id back" );
 			}
 
-			psFrequency.setLong( 1, nodeId );
-			psFrequency.setInt( 2, pathId );			
-			
-			try {
-				psFrequency.executeUpdate();
-				result = true;
-			} catch( java.sql.BatchUpdateException e ) {
-			//catch( java.sql.SQLIntegrityConstraintViolationException e ) {
-				LOG.debug( "The node "+nodeId + " alredy exist in page:" + pathId );
-			}
-			
-		} catch (SQLException e) {
+		}catch (SQLException e) {
 			// TODO check for existing node is part of normal operation and not an error
 			// TODO die here
-			LOG.error( "Exception while adding a new node:", e );
+			LOG.error( "Exception while adding a new node:" , e );
 		}
+
+
+		//add id# and path in frequency table
+		try {
+			if( null == psFrequency ) {
+				psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+			}
+			psFrequency.setLong( 1, nodeId );
+			psFrequency.setInt( 2, pathId );			
+
+
+			psFrequency.executeUpdate();
+			result = true;
+		} catch( java.sql.BatchUpdateException re ) {
+
+			result = false;
+
+		}catch(Exception e){
+			LOG.error( "Error while adding a id in frequency table" );
+		}
+
 		
+		
+		//check the frequency of a xpath (how many path exist in same hash, xpath, host)
+		if (result){
+
+			try {	
+
+				psGetFrequency=conn.prepareStatement( 
+						"SELECT count(url_id ) FROM frequency  WHERE node_id=?  ;" 
+						);
+				psGetFrequency.setLong( 1, nodeId );
+
+				tempRs = psGetFrequency.executeQuery();
+
+				if( tempRs.next() ) {
+					result = (tempRs.getInt( 1 )<5);
+				}else{
+					LOG.error( "Node " + xpath + " from host:" +hostId + " with hash code:"+ hash +" is not in database." );
+				}
+
+			} catch (SQLException e) {
+				LOG.error("Exception while getting node frequency: " , e);
+			}
+
+		}
+
+
 		return result;
+
 	}
 
 	@Override
 	public int getNodeFreq( int hostId, int hash, String xpath ) {
+		//		int result = 0;
+		//
+		//		checkConnection();
+		//		++counter;
+		//		try {	
+		//
+		//			psGetFrequency=conn.prepareStatement( 
+		//					"SELECT count(url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath=? ;" 
+		//					);
+		//			psGetFrequency.setInt( 1, hostId );
+		//			psGetFrequency.setInt( 2, hash );
+		//			psGetFrequency.setString(3, xpath);
+		//
+		//			tempRs = psGetFrequency.executeQuery();
+		//
+		//			if( tempRs.next() ) {
+		//				result = tempRs.getInt( 1 );
+		//			}else{
+		//				LOG.debug( "Node " + xpath + " from host:" +hostId + " with hash code:"+ hash +" is not in database." );
+		//			}
+		//
+		//		} catch (SQLException e) {
+		//			LOG.error("Exception while getting node frequency: ",e);
+		//		}
+		//
+		//		return result;
+
 		int result = 0;
 
-		checkConnection();
-		++counter;
 		try {	
+			if(null == psgetfreq){
+				psgetfreq=conn.prepareStatement( 
+						"SELECT count(url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath_id=? ;" 
+						);
+			}
+			psgetfreq.setInt( 1, hostId );
+			psgetfreq.setInt( 2, hash );
+			psgetfreq.setInt(3, xpath.hashCode());
 
-			psGetFrequency=conn.prepareStatement( 
-					"SELECT count(url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath=? ;" 
-					);
-			psGetFrequency.setInt( 1, hostId );
-			psGetFrequency.setInt( 2, hash );
-			psGetFrequency.setString(3, xpath);
-
-			tempRs = psGetFrequency.executeQuery();
+			tempRs = psgetfreq.executeQuery();
 
 			if( tempRs.next() ) {
 				result = tempRs.getInt( 1 );
 			}else{
-				LOG.debug( "Node " + xpath + " from host:" +hostId + " with hash code:"+ hash +" is not in database." );
+				System.out.println( "Node " + xpath + " from host:" +hostId + " with hash code:"+ hash +" is not in database." );
 			}
 
 		} catch (SQLException e) {
-			LOG.error("Exception while getting node frequency: "+e);
+			System.out.println("Exception while getting node frequency: "+e);
 		}
 
 		return result;
+
 	}
 
-	//use this function to check the connection at the end and if the connections were open this function close them.
 
 	protected void finalize(){
 		if (conn != null) {
@@ -260,9 +373,7 @@ public class ConnectMysql extends Knowledge {
 		}
 	}
 
-	public static void testMe() {
-		LOG.info( "test me was called." );
-	}
+
 
 }
 

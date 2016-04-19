@@ -38,7 +38,7 @@ public class TrainingPart implements HtmlParseFilter{
 
 		parseResult.get(content.getUrl()).getData().getParseMeta().add("rawcontent", HTMLBody );
 		
-		LOG.debug("datamining tarining part finished for : "+content.getUrl());
+		LOG.debug("datamining training part finished for : "+content.getUrl());
 		return parseResult;
 	}
 

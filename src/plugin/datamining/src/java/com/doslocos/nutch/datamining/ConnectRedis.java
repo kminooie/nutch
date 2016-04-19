@@ -18,7 +18,7 @@ public class ConnectRedis extends Knowledge {
 	private static String hostAdd; 
 	private static int redisPort, dbNumber, dbTimeOut, setMaxTotal, setMaxIdle;
 	private static boolean setTestOnBorrow, setTestOnReturn, setTestWhileIdle;
-	private int frequency_treshold;
+	private static int freq_treshold;
 	public static JedisPool pool;
 	public static JedisPoolConfig poolConfig;
 
@@ -30,15 +30,15 @@ public class ConnectRedis extends Knowledge {
 
 			hostAdd = conf.get( "doslocos.training.redisDb.urlConnection", "127.0.0.1" );
 			redisPort = conf.getInt( "doslocos.training.redisDb.portNumber", 6379 );
-			dbNumber = conf.getInt( "doslocos.training.redisDb.dbNumber", 0 );
+			dbNumber = conf.getInt( "doslocos.training.redisDb.dbNumber", 15 );
 			dbTimeOut = conf.getInt( "doslocos.training.redisDb.dbTimeOut", 0 );
 			setTestOnBorrow = conf.getBoolean( "doslocos.training.redisDb.setTestOnBorrow", true );
 			setTestOnReturn = conf.getBoolean( "doslocos.training.redisDb.setTestOnReturn", true );
 			setTestWhileIdle = conf.getBoolean( "doslocos.training.redisDb.setTestWhileIdle", true );
-			setMaxTotal = conf.getInt( "doslocos.training.redisDb.setMaxTotal",0);
-			setMaxIdle = conf.getInt( "doslocos.training.redisDb.setMaxIdle",0);
+			setMaxTotal = conf.getInt( "doslocos.training.redisDb.setMaxTotal",128);
+			setMaxIdle = conf.getInt( "doslocos.training.redisDb.setMaxIdle",128);
 
-			frequency_treshold = conf.getInt( "doslocos.training.frequency_threshould" , 2  );
+			freq_treshold = conf.getInt( "doslocos.training.frequency_threshould" , 2  );
 
 			poolConfig = new JedisPoolConfig();
 
@@ -81,26 +81,6 @@ public class ConnectRedis extends Knowledge {
 
 	@Override	
 	public int getHostId( String host){
-		//		int result = 0 ;
-		//		String host_ID=jedis.get( host );
-		//
-		//		if (host_ID == null ){
-		//
-		//			result = host.hashCode();
-		//			counter++;
-		//
-		//			jedis.set( host, Integer.toString( result ) );
-		//
-		//		}else{
-		//
-		//			result = Integer.parseInt( ( host_ID ) );
-		//		}
-		//
-		//
-		//
-		//		return result;
-
-
 
 		int hostID = host.hashCode();
 
@@ -110,25 +90,9 @@ public class ConnectRedis extends Knowledge {
 
 	@Override
 	public int getPathId(int hostId, String path) {
-
-
-		//		int result = 0 ;
-		//		String path_ID = jedis.get( path );
-		//
-		//		if ( path_ID == null ){
-		//
-		//			result = path.hashCode();
-		//			counter++;
-		//
-		//			jedis.set( path , Integer.toString( result ) );
-		//
-		//		}else{
-		//
-		//			result = Integer.parseInt( ( path_ID ) );
-		//		}
-
-		//		return result;
-
+		if ( null == path ){
+			path = "/" ;
+		}
 		int pathID = path.hashCode();
 		return pathID;
 	}
@@ -153,13 +117,16 @@ public class ConnectRedis extends Knowledge {
 
 				counter ++;
 
-				int  freqPath = jedis.sadd( nodeKey.getBytes(), PathIdString.getBytes()).intValue();
-				if( 1 == freqPath ) {
-					int freq = jedis.scard(nodeKey.getBytes()).intValue();
-					counter ++;
-					if(freq < (frequency_treshold+1)){
+				int  pathAdded = jedis.sadd( nodeKey.getBytes(), PathIdString.getBytes()).intValue();
+
+				if( 1 == pathAdded ) {
+
+					int freqPath = jedis.scard(nodeKey.getBytes()).intValue();
+
+
+					if(freqPath < freq_treshold){
 						result=true;
-						
+
 					}
 				}
 

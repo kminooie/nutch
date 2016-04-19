@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 public class ParsingText {
 
-	private int frequency_threshould ;
+	private static int frequency_threshould ;
 	private String selector;
 	private int hostId, pathId ;
 	
@@ -72,6 +72,7 @@ public class ParsingText {
 
 
 	public String filter( String rawcontent, String host ) {
+		
 		Knowledge k = null;
 		
 		try {
@@ -87,7 +88,9 @@ public class ParsingText {
 		Node nodePage = parseDom( rawcontent );
 
 		String result = checkNode( k, nodePage, "html/body", hostId );
+		
 		LOG.debug( "number of db roundtrip while filtering: " + k.counter + " ,url : "+ host);
+		
 		return result;
 	}
 
@@ -138,13 +141,14 @@ public class ParsingText {
 
 		try{
 			nodeExist = k.addNode( hostId, pathId, hash, xpath );
+			
 
 		}catch(Exception e){
 
 			LOG.debug("Error happened during add a node :"+xpath +"   "+hostId+"   "+ pathId+"   "+ hash, e);
 		}
 
-		if( nodeExist && node.childNodeSize() > 0 ) {
+		if( nodeExist && (node.childNodeSize() > 0 )) {
 
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 				readNode( k, node.childNode( i ), xpath+"/"+xpathMaker( node.childNode( i ) ), pathId, hostId );
