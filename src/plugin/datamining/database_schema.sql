@@ -36,11 +36,11 @@ CREATE TABLE `urls` (
 
 CREATE TABLE `nodes` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `host_id` int unsigned NOT NULL,
   `hash` int NOT NULL,
-  `xpath` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `host_id` int NOT NULL,
+  `xpath_id` int NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `index2` (`host_id`,`hash`,`xpath`)
+  UNIQUE KEY `index2` (`host_id`,`hash`,`xpath_id`)
 ) ENGINE=TokuDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci `compression`='tokudb_zlib';
 
 
@@ -51,3 +51,9 @@ CREATE TABLE `frequency` (
 ) ENGINE=TokuDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci `compression`='tokudb_zlib';
 
 
+
+
+
+
+
+ 

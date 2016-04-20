@@ -30,6 +30,7 @@
 	  <library name="jsoup-1.8.1.jar"/>
 	  <library name="jedis-2.8.1.jar"/>
 	  <library name="commons-pool2-2.4.2.jar"/>
+	  <library name="commons-dbcp2-2.1.1.jar"/>
 
    </runtime>
 
