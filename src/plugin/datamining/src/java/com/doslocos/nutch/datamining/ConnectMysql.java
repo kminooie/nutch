@@ -89,6 +89,7 @@ public class ConnectMysql extends Knowledge {
 
 				conn = crunchifyDS.getConnection();
 
+				LOG.debug("connection to pool established");
 			} catch( Exception e ) {
 				LOG.error( "Failed to establish connection:", e );
 				return false;
@@ -333,6 +334,7 @@ public class ConnectMysql extends Knowledge {
 
 		}
 
+		counter +=3;
 
 		return result;
 
@@ -394,7 +396,7 @@ public class ConnectMysql extends Knowledge {
 		} catch (SQLException e) {
 			LOG.error("Exception while getting node frequency in adding a node: " , e);
 		}
-
+		counter++;
 		return result;
 
 	}
@@ -411,7 +413,11 @@ public class ConnectMysql extends Knowledge {
 		}
 	}
 
-
+	//	public static void main(String[] args) {
+	//		System.out.println("hi");
+	//		
+	//		
+	//	}
 
 }
 
