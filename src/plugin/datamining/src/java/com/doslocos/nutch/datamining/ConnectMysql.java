@@ -21,11 +21,9 @@ public class ConnectMysql extends Knowledge {
 	private static String DBHOST;
 	private static int freq_tr;
 	private static BasicDataSource crunchifyDS;
-	private static Connection conn = null;
-	private static  PreparedStatement  psNode, psFrequency, psGetFrequency, psgetfreq;
+	public Connection conn = null;
+	private PreparedStatement  psNode, psFrequency, psGetFrequency, psgetfreq;
 	private ResultSet tempRs = null;
-
-	//private static final Map< String, Integer > hostIds = new ConcurrentHashMap< String , Integer>();
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
@@ -41,23 +39,20 @@ public class ConnectMysql extends Knowledge {
 
 
 		crunchifyDS = new BasicDataSource();
-		// Define Driver Class
+
 		crunchifyDS.setDriverClassName("org.mariadb.jdbc.Driver");
 
-		// Define Server URL
 		crunchifyDS.setUrl("jdbc:mysql://"+DBHOST+"/"+SCHEMA);
 
-		// Define Username
 		crunchifyDS.setUsername(USER);
 
-		// Define Your Password
 		crunchifyDS.setPassword(PASS);
 
 
 		initConnection( false );
 	}
 
-	private static void checkConnection() {
+	private void checkConnection() {
 		boolean renew = false;
 		try {
 			if ( conn.isClosed() ) renew = true;
@@ -78,7 +73,7 @@ public class ConnectMysql extends Knowledge {
 
 	}
 
-	private static boolean initConnection( boolean force ) {
+	private boolean initConnection( boolean force ) {
 		if( force || null == conn ) {
 			try {
 
@@ -204,7 +199,7 @@ public class ConnectMysql extends Knowledge {
 		//		counter += 2;
 		//		try {
 		//
-		//			if( null == psNode ) {
+		//			if( null == psNode ) { 
 		//				psNode = conn.prepareStatement( 
 		//						"INSERT INTO nodes ( host_id, hash, xpath ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
 		//						, Statement.RETURN_GENERATED_KEYS
