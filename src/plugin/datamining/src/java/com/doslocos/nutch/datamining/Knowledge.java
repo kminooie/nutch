@@ -2,6 +2,7 @@ package com.doslocos.nutch.datamining;
 
 public abstract class Knowledge {
 	public int counter = 0;
+	public static int bCounter=0;
 	
 	public abstract int getHostId( String host );
 	
@@ -20,7 +21,7 @@ public abstract class Knowledge {
 	
 	public abstract int getNodeFreq( int hostId, int hash, String xpath );
 	
-
+	public abstract boolean emptyBatch(int pathId);
 
 }
 

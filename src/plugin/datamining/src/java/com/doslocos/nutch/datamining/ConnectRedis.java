@@ -184,4 +184,11 @@ public class ConnectRedis extends Knowledge {
 
 	}
 
+
+	@Override
+	public boolean emptyBatch(int pathId) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 }

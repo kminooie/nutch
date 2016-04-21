@@ -20,10 +20,19 @@ public class ConnectMysql extends Knowledge {
 	private static String PASS;
 	private static String DBHOST;
 	private static int freq_tr;
-	private static BasicDataSource crunchifyDS;
+	private static BasicDataSource poolDS;
 	public Connection conn = null;
 	private PreparedStatement  psNode, psFrequency, psGetFrequency, psgetfreq;
 	private ResultSet tempRs = null;
+
+
+	private static int[] executeResult = null;
+
+
+
+
+
+
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
@@ -38,15 +47,15 @@ public class ConnectMysql extends Knowledge {
 		LOG.debug("Connection class called");
 
 
-		crunchifyDS = new BasicDataSource();
+		poolDS = new BasicDataSource();
 
-		crunchifyDS.setDriverClassName("org.mariadb.jdbc.Driver");
+		poolDS.setDriverClassName("org.mariadb.jdbc.Driver");
 
-		crunchifyDS.setUrl("jdbc:mysql://"+DBHOST+"/"+SCHEMA);
+		poolDS.setUrl("jdbc:mysql://"+DBHOST+"/"+SCHEMA);
 
-		crunchifyDS.setUsername(USER);
+		poolDS.setUsername(USER);
 
-		crunchifyDS.setPassword(PASS);
+		poolDS.setPassword(PASS);
 
 
 		initConnection( false );
@@ -82,7 +91,7 @@ public class ConnectMysql extends Knowledge {
 				//				String sqlConnection="jdbc:mysql://" + DBHOST + "/" + SCHEMA;
 				//				conn = DriverManager.getConnection(sqlConnection, USER, PASS );
 
-				conn = crunchifyDS.getConnection();
+				conn = poolDS.getConnection();
 
 				LOG.debug("connection to pool established");
 			} catch( Exception e ) {
@@ -265,44 +274,82 @@ public class ConnectMysql extends Knowledge {
 			psNode.setInt( 2, hash );
 			psNode.setInt( 3, xpath.hashCode() );
 
-			psNode.executeUpdate();
 
-			tempRs = psNode.getGeneratedKeys();
+			//my code
+			psNode.addBatch();
+			bCounter ++;
+			if (bCounter % 500==0){
 
-			if( tempRs.next()) {
-				nodeId = tempRs.getLong( 1 );
+				executeResult = psNode.executeBatch();
 
-			}else{
+				for (int j =0 ;j< executeResult.length;j++){
+					tempRs.next();
 
-				LOG.debug( "Unable to get the node genrated Id back" );
+					try {
+						if( null == psFrequency ) {
+							psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+						}
+						psFrequency.setLong( 1, tempRs.getLong(1));
+						psFrequency.setInt( 2, pathId );			
+
+						psFrequency.addBatch();
+
+
+
+					}catch(Exception e){
+						LOG.error( "Error while adding a id in frequency table" , e  );
+					}
+
+					psFrequency.executeBatch();
+
+
+
+				}
+
+				bCounter=0;
 			}
-
-		}catch (SQLException e) {
-
-			LOG.error( "Exception while adding a new node:" , e );
-		}
-
-
-		//add id# and path in frequency table
-		try {
-			if( null == psFrequency ) {
-				psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
-			}
-			psFrequency.setLong( 1, nodeId );
-			psFrequency.setInt( 2, pathId );			
-
-
-			psFrequency.executeUpdate();
-			result = true;
-
-		} catch( java.sql.BatchUpdateException re ) {
-
-			result = false;
-
 		}catch(Exception e){
-			LOG.error( "Error while adding a id in frequency table" , e  );
+			LOG.error("Exception happen");
 		}
-
+		//
+		//			//	psNode.executeUpdate();
+		//
+		//			tempRs = psNode.getGeneratedKeys();
+		//
+		//			if( tempRs.next()) {
+		//				nodeId = tempRs.getLong( 1 );
+		//
+		//			}else{
+		//
+		//				LOG.debug( "Unable to get the node genrated Id back" );
+		//			}
+		//
+		//		}catch (SQLException e) {
+		//
+		//			LOG.error( "Exception while adding a new node:" , e );
+		//		}
+		//
+		//
+		//		//add id# and path in frequency table
+		//		try {
+		//			if( null == psFrequency ) {
+		//				psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+		//			}
+		//			psFrequency.setLong( 1, nodeId );
+		//			psFrequency.setInt( 2, pathId );			
+		//
+		//
+		//			psFrequency.executeUpdate();
+		//			result = true;
+		//
+		//		} catch( java.sql.BatchUpdateException re ) {
+		//
+		//			result = false;
+		//
+		//		}catch(Exception e){
+		//			LOG.error( "Error while adding a id in frequency table" , e  );
+		//		}
+		//
 
 
 		//check the frequency of a xpath (how many path exist in same hash, xpath, host)
@@ -396,6 +443,35 @@ public class ConnectMysql extends Knowledge {
 
 	}
 
+	public boolean emptyBatch(int pathId){
+		boolean result =false;
+		try {
+
+			int[] executeResult = psNode.executeBatch();
+
+			for (int j =0 ;j< executeResult.length;j++){
+				tempRs.next();
+				if( null == psFrequency ) {
+					psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
+				}
+				psFrequency.setLong( 1, tempRs.getLong(1));
+				psFrequency.setInt( 2, pathId );			
+
+				psFrequency.addBatch();
+
+			}
+
+
+
+			psFrequency.executeBatch();
+			result =true;
+			
+		}catch(Exception e){
+			LOG.error( "Error while adding an id in frequency table" , e  );
+		}
+		
+		return result;
+	}
 
 	protected void finalize(){
 		if (conn != null) {

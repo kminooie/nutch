@@ -58,7 +58,17 @@ public class ParsingText {
 			pathId = k.getPathId( hostId, path );
 			
 			readNode( k, pageNode, "html/body", pathId, hostId );
-
+			
+			
+			if (Knowledge.bCounter>0){
+				
+				k.emptyBatch(pathId);
+			}
+			
+			
+			
+			
+			
 			result=true;
 		}catch( Exception e ){
 			LOG.error( "Exception while parsingFunction " + hostId + "   " + pathId, e );
