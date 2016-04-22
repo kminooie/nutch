@@ -24,8 +24,8 @@ public class IndexingPart implements IndexingFilter {
 
 		String textContent = nodeParse.filter( parse.getData().getParseMeta().get("rawcontent"), doc.getFieldValue("host").toString() );
 
-		doc.removeField( "content" );
-		doc.add("content", textContent);
+		
+		doc.add("rawcontent", textContent);
 
 		LOG.debug("new parsed text replaced with old one by datamining plug in for : "+url.toString());
 

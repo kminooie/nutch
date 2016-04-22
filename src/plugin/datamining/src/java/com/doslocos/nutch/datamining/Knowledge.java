@@ -4,6 +4,10 @@ public abstract class Knowledge {
 	public int counter = 0;
 	public static int bCounter=0;
 	
+	public static int strToId( String str ) {
+		return str.hashCode();
+	}
+	
 	public abstract int getHostId( String host );
 	
 	public abstract int getPathId( int hostId, String path );

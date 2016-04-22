@@ -20,19 +20,14 @@ public class ConnectMysql extends Knowledge {
 	private static String PASS;
 	private static String DBHOST;
 	private static int freq_tr;
+	
 	private static BasicDataSource poolDS;
 	public Connection conn = null;
-	private PreparedStatement  psNode, psFrequency, psGetFrequency, psgetfreq;
-	private ResultSet tempRs = null;
-
+	
+	public static PreparedStatement  psNode, psFrequency, psGetFrequency, psgetfreq;
+	public static ResultSet tempRs = null;
 
 	private static int[] executeResult = null;
-
-
-
-
-
-
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
@@ -106,37 +101,6 @@ public class ConnectMysql extends Knowledge {
 
 	@Override
 	public int getHostId( String domain ) {
-		//		Integer result = 0;
-		//
-		//		result = hostIds.get( domain );
-		//		if( null == result ) {
-		//			checkConnection();
-		//			++counter;
-		//			try {
-		//				if( null == psHost ) {
-		//					psHost = conn.prepareStatement( 
-		//							"INSERT INTO hosts ( domain ) VALUES ( ? ) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
-		//							, Statement.RETURN_GENERATED_KEYS
-		//							);
-		//				}
-		//
-		//				psHost.setString(1,domain);
-		//				psHost.executeUpdate();
-		//				tempRs = psHost.getGeneratedKeys();
-		//
-		//				if( tempRs.next()) {
-		//					result = tempRs.getInt( 1 );
-		//					hostIds.put( domain, result );
-		//				}else{
-		//					LOG.error( "Unable to get the genrated node Id back" );
-		//				}
-		//			} catch( Exception e ) {
-		//				LOG.error( "Exception while inserting new host:", e );
-		//			}
-		//		}
-		//
-		//		LOG.debug( "Got id:" + result + " for host:" + domain );
-		//		return result;
 
 		Integer result = domain.hashCode();
 
@@ -146,48 +110,7 @@ public class ConnectMysql extends Knowledge {
 
 	@Override
 	public int getPathId( int hostId, String path ) {
-		//		int result = 0;
-		//
-		//		if( null == path ) {
-		//			LOG.debug( "path is null" );
-		//			path = "/";
-		//		}
-		//
-		//		if( "" == path ) {
-		//			LOG.debug( "path is empty" );
-		//			path = "/";
-		//		}		
-		//
-		//		LOG.debug( "hostId:" + hostId + " path:" + path );
-		//
-		//		checkConnection();
-		//		++counter;
-		//		try {
-		//
-		//			if( null == psUrl ) {
-		//				psUrl = conn.prepareStatement( 
-		//						"INSERT INTO urls ( host_id , path ) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
-		//						, Statement.RETURN_GENERATED_KEYS
-		//						);
-		//			}
-		//
-		//			psUrl.setInt( 1, hostId );
-		//			psUrl.setString( 2, path );
-		//			psUrl.executeUpdate();
-		//			ResultSet tempRs = psUrl.getGeneratedKeys();
-		//
-		//			if( tempRs.next()) {
-		//				result = tempRs.getInt( 1 );
-		//			}else{
-		//				LOG.error( "Unable to get the genrated url Id back" );
-		//			}
-		//
-		//		} catch( Exception e ) {
-		//			LOG.error( "Exception while inserting new host:", e );
-		//		}
-		//
-		//		LOG.debug( "Returning id:" + result + " for path:" + path );
-		//		return result;
+
 
 		if ( null == path ){
 			path = "/" ;
@@ -255,13 +178,12 @@ public class ConnectMysql extends Knowledge {
 		//		
 		//		return result;
 
-		boolean result = false;
-		long nodeId = 0;
+		boolean result = true;
 
 		checkConnection();
 
 		try {
-			//add hash-host-xapth in nodes table and extract id3 from it
+
 
 			if( null == psNode ) {
 				psNode = conn.prepareStatement( 
@@ -274,42 +196,10 @@ public class ConnectMysql extends Knowledge {
 			psNode.setInt( 2, hash );
 			psNode.setInt( 3, xpath.hashCode() );
 
-
-			//my code
 			psNode.addBatch();
-			bCounter ++;
-			if (bCounter % 500==0){
 
-				executeResult = psNode.executeBatch();
-
-				for (int j =0 ;j< executeResult.length;j++){
-					tempRs.next();
-
-					try {
-						if( null == psFrequency ) {
-							psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
-						}
-						psFrequency.setLong( 1, tempRs.getLong(1));
-						psFrequency.setInt( 2, pathId );			
-
-						psFrequency.addBatch();
-
-
-
-					}catch(Exception e){
-						LOG.error( "Error while adding a id in frequency table" , e  );
-					}
-
-					psFrequency.executeBatch();
-
-
-
-				}
-
-				bCounter=0;
-			}
 		}catch(Exception e){
-			LOG.error("Exception happen");
+			LOG.error( "Error while adding a id in frequency table" , e  );
 		}
 		//
 		//			//	psNode.executeUpdate();
@@ -353,30 +243,30 @@ public class ConnectMysql extends Knowledge {
 
 
 		//check the frequency of a xpath (how many path exist in same hash, xpath, host)
-		if (result){
 
-			try {	
 
-				psGetFrequency=conn.prepareStatement( 
-						"SELECT count(url_id ) FROM frequency  WHERE node_id=?  ;" 
-						);
-				psGetFrequency.setLong( 1, nodeId );
+		//		try {	
+		//
+		//			psGetFrequency=conn.prepareStatement( 
+		//					"SELECT count(url_id ) FROM frequency  WHERE node_id=?  ;" 
+		//					);
+		//			psGetFrequency.setLong( 1, nodeId );
+		//
+		//			tempRs = psGetFrequency.executeQuery();
+		//			counter ++;
+		//
+		//			if( tempRs.next() ) {
+		result = (getNodeFreq(hostId, hash, xpath ) < freq_tr );
+		//			}else{
+		//				LOG.debug( "Node " + xpath + " from host:" + hostId + " with hash code:"+ hash +" is not in database." );
+		//			}
 
-				tempRs = psGetFrequency.executeQuery();
+		//		} catch (SQLException e) {
+		//			LOG.error("Exception while getting node frequency: " , e);
+		//		}
 
-				if( tempRs.next() ) {
-					result = (tempRs.getInt( 1 ) < freq_tr );
-				}else{
-					LOG.debug( "Node " + xpath + " from host:" + hostId + " with hash code:"+ hash +" is not in database." );
-				}
 
-			} catch (SQLException e) {
-				LOG.error("Exception while getting node frequency: " , e);
-			}
 
-		}
-
-		counter +=3;
 
 		return result;
 
@@ -444,13 +334,17 @@ public class ConnectMysql extends Knowledge {
 	}
 
 	public boolean emptyBatch(int pathId){
-		boolean result =false;
-		try {
 
-			int[] executeResult = psNode.executeBatch();
+		boolean result = false ;
+		try {
+			executeResult = psNode.executeBatch();
+
+			tempRs = psNode.getGeneratedKeys();
 
 			for (int j =0 ;j< executeResult.length;j++){
 				tempRs.next();
+
+
 				if( null == psFrequency ) {
 					psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id,url_id ) VALUES (?, ?);" );
 				}
@@ -460,16 +354,15 @@ public class ConnectMysql extends Knowledge {
 				psFrequency.addBatch();
 
 			}
-
-
-
 			psFrequency.executeBatch();
-			result =true;
-			
+			counter += 2;
+			LOG.info("finish to update batches");
+			result = true;
 		}catch(Exception e){
-			LOG.error( "Error while adding an id in frequency table" , e  );
+			LOG.error( "Error while adding a id in frequency table" , e  );
 		}
 		
+
 		return result;
 	}
 

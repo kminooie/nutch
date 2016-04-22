@@ -14,7 +14,7 @@ public class ParsingText {
 	private static int frequency_threshould ;
 	private String selector;
 	private int hostId, pathId ;
-	
+
 	private String connClassName ;
 	private Configuration conf ;
 	public static final Logger LOG = LoggerFactory.getLogger(ParsingText.class);
@@ -28,10 +28,10 @@ public class ParsingText {
 				"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
 				);
 
-	
+
 		this.conf = conf;
 		connClassName = conf.get( "doslocos.training.storage.class", "com.doslocos.nutch.datamining.ConnectRedis" );
-		
+
 		LOG.debug( "Using: " + connClassName + " for storage" );
 
 	}
@@ -40,7 +40,7 @@ public class ParsingText {
 	public boolean learn( String HTMLBody, String host, String path ) {
 		boolean result = false;
 		Knowledge k = null;
-		
+
 		try {
 			Class<?> implClass = Class.forName( connClassName );
 			k = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
@@ -48,27 +48,27 @@ public class ParsingText {
 			LOG.error( "Got exception while loading storage class: ", e );
 		}
 		k.counter = 0;
-		
-		
+
+
 		try{
 			Node pageNode;
 			pageNode = parseDom( HTMLBody );
-			
+
 			hostId = k.getHostId( host );
 			pathId = k.getPathId( hostId, path );
-			
+
 			readNode( k, pageNode, "html/body", pathId, hostId );
-			
-			
-			if (Knowledge.bCounter>0){
-				
-				k.emptyBatch(pathId);
-			}
-			
-			
-			
-			
-			
+
+
+
+
+			k.emptyBatch(pathId);
+
+
+
+
+
+
 			result=true;
 		}catch( Exception e ){
 			LOG.error( "Exception while parsingFunction " + hostId + "   " + pathId, e );
@@ -82,9 +82,9 @@ public class ParsingText {
 
 
 	public String filter( String rawcontent, String host ) {
-		
+
 		Knowledge k = null;
-		
+
 		try {
 			Class<?> implClass = Class.forName( connClassName );
 			k = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
@@ -92,15 +92,15 @@ public class ParsingText {
 			LOG.error( "Got exception while loading storage class: ", e );
 		}
 		k.counter = 0;
-		
+
 		hostId=host.hashCode();
 
 		Node nodePage = parseDom( rawcontent );
 
 		String result = checkNode( k, nodePage, "html/body", hostId );
-		
+
 		LOG.debug( "number of db roundtrip while filtering: " + k.counter + " ,url : "+ host);
-		
+
 		return result;
 	}
 
@@ -151,7 +151,7 @@ public class ParsingText {
 
 		try{
 			nodeExist = k.addNode( hostId, pathId, hash, xpath );
-			
+
 
 		}catch(Exception e){
 

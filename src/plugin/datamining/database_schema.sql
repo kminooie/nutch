@@ -46,7 +46,7 @@ CREATE TABLE `nodes` (
 
 CREATE TABLE `frequency` (
   `node_id` bigint unsigned NOT NULL,
-  `url_id` int unsigned NOT NULL,
+  `url_id` int  NOT NULL,
   PRIMARY KEY (`node_id`,`url_id`)
 ) ENGINE=TokuDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci `compression`='tokudb_zlib';
 
