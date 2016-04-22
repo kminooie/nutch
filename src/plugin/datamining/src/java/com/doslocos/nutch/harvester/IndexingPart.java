@@ -1,4 +1,4 @@
-package com.doslocos.nutch.datamining;
+package com.doslocos.nutch.harvester;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -15,19 +15,19 @@ import org.slf4j.LoggerFactory;
 public class IndexingPart implements IndexingFilter {
 
 	public static final Logger LOG = LoggerFactory.getLogger(IndexingPart.class);
+
+	public static String newFieldName = "harvestedContent";
 	private Configuration conf;
-	private ParsingText nodeParse;
+	private Harvester nodeParse;
 
 	@Override
 	public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
 			CrawlDatum datum, Inlinks inlinks) throws IndexingException  {
 
 		String textContent = nodeParse.filter( parse.getData().getParseMeta().get("rawcontent"), doc.getFieldValue("host").toString() );
+		doc.add( newFieldName, textContent );
 
-		
-		doc.add("rawcontent", textContent);
-
-		LOG.debug("new parsed text replaced with old one by datamining plug in for : "+url.toString());
+		LOG.debug("new parsed text replaced with old one by harvester plug in for : "+url.toString());
 
 		return doc;
 	}
@@ -35,7 +35,11 @@ public class IndexingPart implements IndexingFilter {
 
 
 	public void setConf(Configuration conf) {
-		nodeParse = new ParsingText( conf );
+		nodeParse = new Harvester( conf );
+
+		newFieldName =  conf.getInt( "doslocos.harvester.fieldname" , newFieldName );
+		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
+		
 		this.conf = conf;
 	}
 

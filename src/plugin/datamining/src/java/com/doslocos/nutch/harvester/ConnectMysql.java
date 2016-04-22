@@ -1,4 +1,4 @@
-package com.doslocos.nutch.datamining;
+package com.doslocos.nutch.harvester;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -13,14 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class ConnectMysql extends Knowledge {
+public class ConnectMysql extends Storage {
 
-	private static String SCHEMA;
-	private static String USER;
-	private static String PASS;
-	private static String DBHOST;
-	private static int freq_tr;
-	
 	private static BasicDataSource poolDS;
 	public Connection conn = null;
 	
@@ -31,96 +25,69 @@ public class ConnectMysql extends Knowledge {
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 
+	public static void set( Configuration conf ) {
+		String DBHOST = conf.get("doslocos.harvester.database.host", 'localhost' );
+		String SCHEMA = conf.get("doslocos.harvester.database.schema", 'nutch_harvester_db');
+		String USER = conf.get("doslocos.harvester.database.username", 'root' );
+		String PASS = conf.get("doslocos.harvester.database.password", "" );
 
-	public ConnectMysql( Configuration conf ) {
-		DBHOST = conf.get("doslocos.training.database.host");
-		SCHEMA = conf.get("doslocos.training.database.schema");
-		USER = conf.get("doslocos.training.database.username");
-		PASS = conf.get("doslocos.training.database.password");
-		freq_tr = conf.getInt( "doslocos.training.frequency_threshould" , 2  )+1;
+		LOG.info( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA" with user: " + USER );
+
+		poolDS = new BasicDataSource();
+		poolDS.setDriverClassName( "org.mariadb.jdbc.Driver" );
+		poolDS.setUrl( "jdbc:mysql://"+DBHOST+"/"+SCHEMA );
+		poolDS.setUsername( USER );
+		poolDS.setPassword( PASS );
+
+		Connection conn = poolDS.getConnection();
+
+		if( conn ) {
+			LOG.info( "MariaDB connected." );
+		} else {
+			LOG.error( "Failed to connect to MariaDB." );
+			System.exit( 1 );
+		}
+
+		super.set( conf );
+	}
+
+	public ConnectMysql() {
+		
+		// freq_tr = conf.getInt( "doslocos.harvester.frequency_threshould" , 2  )+1;
 
 		LOG.debug("Connection class called");
 
-
-		poolDS = new BasicDataSource();
-
-		poolDS.setDriverClassName("org.mariadb.jdbc.Driver");
-
-		poolDS.setUrl("jdbc:mysql://"+DBHOST+"/"+SCHEMA);
-
-		poolDS.setUsername(USER);
-
-		poolDS.setPassword(PASS);
-
-
-		initConnection( false );
+		checkConnection();
 	}
 
 	private void checkConnection() {
 		boolean renew = false;
 		try {
-			if ( conn.isClosed() ) renew = true;
+			if ( null == conn || conn.isClosed() ) renew = true;
 		} catch ( Exception e ) {
 			LOG.error( "Exception while trying to check connection:", e );
 			renew = true;
 		}
 
 		if( renew ) {
-			renew = ! initConnection( true );
-			LOG.debug( "Renewed database connection.");
-		}
-
-		if( renew ) {
-			LOG.error( "Unable to renew the database connection."  );
-		}
-
-
-	}
-
-	private boolean initConnection( boolean force ) {
-		if( force || null == conn ) {
 			try {
-
-				//				LOG.debug("Connection to database stablished");
-				//				Class.forName("org.mariadb.jdbc.Driver");
-				//				String sqlConnection="jdbc:mysql://" + DBHOST + "/" + SCHEMA;
-				//				conn = DriverManager.getConnection(sqlConnection, USER, PASS );
-
 				conn = poolDS.getConnection();
-
-				LOG.debug("connection to pool established");
+				LOG.debug( "got connection from pool" );
+				renew = true;
 			} catch( Exception e ) {
-				LOG.error( "Failed to establish connection:", e );
-				return false;
+				LOG.error( "Failed to get connection from pool:", e );
 			}
 		}
 
-		return true;
+		// if( renew ) {
+		// 	LOG.error( "Unable to renew the database connection."  );
+		// }
+
+
 	}
 
 
-	@Override
-	public int getHostId( String domain ) {
 
-		Integer result = domain.hashCode();
-
-
-		return result;
-	}
-
-	@Override
-	public int getPathId( int hostId, String path ) {
-
-
-		if ( null == path ){
-			path = "/" ;
-		}
-
-		int result = path.hashCode();
-
-		return result;
-
-	}
 
 	@Override
 	public boolean addNode( int hostId, int pathId, int hash, String xpath ) {

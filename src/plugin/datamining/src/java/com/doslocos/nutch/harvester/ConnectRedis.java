@@ -1,4 +1,4 @@
-package com.doslocos.nutch.datamining;
+package com.doslocos.nutch.harvester;
 
 
 import org.apache.hadoop.conf.Configuration;
@@ -10,7 +10,7 @@ import redis.clients.jedis.JedisPoolConfig;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 
-public class ConnectRedis extends Knowledge {
+public class ConnectRedis extends Storage {
 
 
 	public static final Logger LOG = LoggerFactory.getLogger( ConnectRedis.class );

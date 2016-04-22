@@ -1,4 +1,4 @@
-package com.doslocos.nutch.datamining;
+package com.doslocos.nutch.harvester;
 
 
 import java.net.MalformedURLException;
@@ -20,7 +20,7 @@ public class TrainingPart implements HtmlParseFilter{
 
 	public static final Logger LOG = LoggerFactory.getLogger(TrainingPart.class);
 	public static Configuration conf;
-	public static ParsingText kbc;
+	public static Harvester kbc;
 	
 
 	@Override
@@ -38,14 +38,14 @@ public class TrainingPart implements HtmlParseFilter{
 
 		parseResult.get(content.getUrl()).getData().getParseMeta().add("rawcontent", HTMLBody );
 		
-		LOG.debug("datamining training part finished for : "+content.getUrl());
+		LOG.debug("harvester training part finished for : "+content.getUrl());
 		return parseResult;
 	}
 
 	public void setConf(Configuration conf) {
 		if( null == TrainingPart.conf ) {
 			TrainingPart.conf = conf;
-			kbc = new ParsingText( conf);
+			kbc = new Harvester( conf);
 		}
 	}
 

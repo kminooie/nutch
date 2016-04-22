@@ -1,49 +1,73 @@
-package com.doslocos.nutch.datamining;
+package com.doslocos.nutch.harvester;
+
+import com.doslocos.nutch.util.NodeUtil;
 
 import org.apache.hadoop.conf.Configuration;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
+// import org.jsoup.Jsoup;
+// import org.jsoup.nodes.Document;
+// import org.jsoup.select.Elements;        
 import org.jsoup.nodes.Node;
-import org.jsoup.select.Elements;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ParsingText {
+public class Harvester {
 
 	private static int frequency_threshould ;
-	private String selector;
 	private int hostId, pathId ;
 
-	private String connClassName ;
+	private String connClassName;
+	private Class<?> connClass;
 	private Configuration conf ;
-	public static final Logger LOG = LoggerFactory.getLogger(ParsingText.class);
+	public static final Logger LOG = LoggerFactory.getLogger( Harvester.class );
 
 
-	public ParsingText(Configuration conf){
-
-		frequency_threshould =  conf.getInt( "doslocos.training.frequency_threshould" , 2  );
-		selector = conf.get(
-				"doslocos.training.selector",
-				"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
-				);
 
 
-		this.conf = conf;
-		connClassName = conf.get( "doslocos.training.storage.class", "com.doslocos.nutch.datamining.ConnectRedis" );
+	public Harvester( Configuration conf ){
 
-		LOG.debug( "Using: " + connClassName + " for storage" );
+		frequency_threshould =  conf.getInt( "doslocos.harvester.frequency_threshould" , 2  );
+		LOG.info( "frequency threshould: " + frequency_threshould );
 
+		util.selectList = conf.get( "doslocos.harvester.selector", util.selectList );
+		LOG.info( "selectList: " + util.selectList );
+
+		connClassName = conf.get( "doslocos.harvester.storage.class", null );
+		if( null == connClassName ) {
+			LOG.error( "storage class ( doslocos.harvester.storage.class ) is not set. this property is mandatory." );
+			LOG.error( "available options are:" );
+			LOG.error( "com.doslocos.nutch.harvester.ConnectMysql" );
+			LOG.error( "com.doslocos.nutch.harvester.ConnectRedis" );
+
+			die();
+		}
+		LOG.info( "storage class: " + connClassName );
+
+		try {
+			connClass = Class.forName( connClassName );
+
+			Method set = lc.getMethod( "set" );
+			set.invoke( null, conf );
+			
+		} catch( Exception e ) {
+			LOG.error( "Got exception while setting storage class: ", e );
+			die();
+		}
+
+		this.conf = conf;		
 	}
 
+	public void die() {
+		System.exit( 1 );
+	}
 
 	public boolean learn( String HTMLBody, String host, String path ) {
 		boolean result = false;
-		Knowledge k = null;
+		Storage k = null;
 
 		try {
 			Class<?> implClass = Class.forName( connClassName );
-			k = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
+			k = (Storage) implClass.getConstructor( Configuration.class ).newInstance( conf );
 		} catch( Exception e ) {
 			LOG.error( "Got exception while loading storage class: ", e );
 		}
@@ -83,11 +107,11 @@ public class ParsingText {
 
 	public String filter( String rawcontent, String host ) {
 
-		Knowledge k = null;
+		Storage k = null;
 
 		try {
 			Class<?> implClass = Class.forName( connClassName );
-			k = (Knowledge) implClass.getConstructor( Configuration.class ).newInstance( conf );
+			k = (Storage) implClass.getConstructor( Configuration.class ).newInstance( conf );
 		} catch( Exception e ) {
 			LOG.error( "Got exception while loading storage class: ", e );
 		}
@@ -104,46 +128,9 @@ public class ParsingText {
 		return result;
 	}
 
-	private Node parseDom( String page_content ) {
-		Document doc = Jsoup.parse( page_content );
-		doc.select( selector ).remove();
-		Elements ele = doc.getElementsByTag( "body" );
-		Node node1 = ele.get( 0 );
-		return node1;
-
-	}
-
-	private static String xpathMaker( Node node ) {
-
-		int fre=1;
-		Node ft=node;
-		for(int count=node.siblingIndex();count>0;count--){
-			ft=ft.previousSibling();
-			if(ft.nodeName()==node.nodeName()){
-				fre++;
-			}		
-		}
-
-		if(node.nodeName().startsWith("#")){
-			return(node.nodeName().substring(1)+"()"+"["+fre+"]");
-		}else{
-			return(node.nodeName()+"["+fre+"]");
-		}
-
-	}
 
 
-	private static String extractText( Node node ) {
-		String string1="";
-		if (node.hasAttr("text")){
-			string1=node.attr("text").replaceAll("\\s+", " ").trim();
-		}
-
-		return string1;	
-	}
-
-
-	private void readNode( Knowledge k, Node node, String xpath, int pathId, int hostId ) {
+	private void readNode( Storage k, Node node, String xpath, int pathId, int hostId ) {
 		int hash = node.toString().hashCode();
 		boolean nodeExist = true;
 
@@ -167,7 +154,7 @@ public class ParsingText {
 
 	}
 
-	private String checkNode( Knowledge k, Node node, String xpath, int hostId ) {
+	private String checkNode( Storage k, Node node, String xpath, int hostId ) {
 		int hash = node.toString().hashCode();
 		String content = "";
 
