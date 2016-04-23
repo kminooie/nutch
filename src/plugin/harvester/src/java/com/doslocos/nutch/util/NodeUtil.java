@@ -13,11 +13,11 @@ import org.jsoup.select.Elements;
 
 public class NodeUtil {
 
-	public String selectList =
+	public static String selectList =
 		"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
 	;
 	
-	public Node parseDom( String page_content ) {
+	public static Node parseDom( String page_content ) {
 		Document doc = Jsoup.parse( page_content );
 		doc.select( selectList ).remove();
 		Elements ele = doc.getElementsByTag( "body" );

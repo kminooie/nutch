@@ -52,7 +52,7 @@ public class LRUCache<K,V> {
 	}
 
 	public LRUCache (int cacheSize) {
-		LRUCache( cacheSize, 0.75f );
+		this( cacheSize, 0.75f );
 	}
 
 	/**
@@ -102,7 +102,7 @@ public class LRUCache<K,V> {
 
 	public synchronized Map<K,V> mget( ArrayList<K> arr ) {
 		Map<K,V> result = new LinkedHashMap<K,V>( arr.size(), 0.95f );
-		for( V key : arr ) {
+		for( K key : arr ) {
 			result.put ( key, map.get(key) );
 		}
 

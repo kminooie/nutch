@@ -7,6 +7,9 @@ import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+
+import java.util.Map;
+
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 
@@ -24,7 +27,11 @@ public class ConnectRedis extends Storage {
 
 	public Jedis jedis;
 
-	public ConnectRedis(Configuration conf){
+	public ConnectRedis( String host, String path ) {
+		super( host, path );
+	}
+
+	public static void set(Configuration conf){
 
 		if( null == poolConfig) {
 
@@ -52,7 +59,7 @@ public class ConnectRedis extends Storage {
 
 		}
 
-		initConnection();
+		// initConnection();
 	}
 
 
@@ -77,26 +84,14 @@ public class ConnectRedis extends Storage {
 
 	}
 
-
-
-	@Override	
-	public int getHostId( String host){
-
-		int hostID = host.hashCode();
-
-		return hostID;
+	protected void addToBackendList( Integer xpath, Integer hash ) { 
+		
 	}
-
-
-	@Override
-	public int getPathId(int hostId, String path) {
-		if ( null == path ){
-			path = "/" ;
-		}
-		int pathID = path.hashCode();
-		return pathID;
+	protected Map<NodeItem, Integer> getBackendFreq() {
+		return new HashMap<NodeItem, Integer>();
 	}
-
+	
+	
 	@Override
 	public boolean addNode(int hostId, int pathId, int hash, String xpath) {
 

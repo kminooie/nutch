@@ -37,7 +37,7 @@ public class IndexingPart implements IndexingFilter {
 	public void setConf(Configuration conf) {
 		nodeParse = new Harvester( conf );
 
-		newFieldName =  conf.getInt( "doslocos.harvester.fieldname" , newFieldName );
+		newFieldName =  conf.get( "doslocos.harvester.fieldname" , newFieldName );
 		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
 		
 		this.conf = conf;

@@ -15,7 +15,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-<project name="datamining" default="jar-core">
+<project name="harvester" default="jar-core">
 
   <import file="../build-plugin.xml"/>
 

@@ -32,7 +32,7 @@ public class TrainingPart implements HtmlParseFilter{
 			URL netUrl = new URL(content.getUrl());
 			kbc.learn( HTMLBody, netUrl.getHost(), netUrl.getPath() );
 		} catch (MalformedURLException e) {
-			LOG.error("Error while extracting url from content", e );
+			LOG.error("Error while training part in datamining plugin", e );
 		}
 				
 
