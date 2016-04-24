@@ -56,7 +56,7 @@ public abstract class Storage {
 		pathId = stringToId( path );
 	}
 
-	public static int stringToId( String str ) {
+	public static Integer stringToId( String str ) {
 		return str.hashCode();
 	}
 	
@@ -103,7 +103,7 @@ public abstract class Storage {
 	 * @param xpath
 	 * @return boolean return false if node already existed, true if it has been added
 	 */
-	public abstract boolean addNode( int hostId, int pathId, int hash, String xpath );
+	public abstract boolean addNode( String xpath, Integer hash );
 	
 	public abstract int getNodeFreq( int hostId, int hash, String xpath );
 	

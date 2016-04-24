@@ -1,12 +1,14 @@
 package com.doslocos.nutch.harvester;
 
+import java.lang.reflect.Method;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+
 // import org.jsoup.Jsoup;
 // import org.jsoup.nodes.Document;
 // import org.jsoup.select.Elements;        
 import org.jsoup.nodes.Node;
-import java.lang.reflect.Method;
 
 import com.doslocos.nutch.util.NodeUtil;
 
@@ -15,14 +17,15 @@ import org.slf4j.LoggerFactory;
 
 public class Harvester {
 
-	private static int frequency_threshould ;
-	private int hostId, pathId ;
+	static private int frequency_threshould ;
+	
+	static public final Logger LOG = LoggerFactory.getLogger( Harvester.class );
 
+	private int hostId, pathId ;
 	private String connClassName;
 	private Class<?> connClass;
 	private Configuration conf ;
-	public static final Logger LOG = LoggerFactory.getLogger( Harvester.class );
-
+	
 
 	public Harvester( Configuration conf ){
 
@@ -62,9 +65,11 @@ public class Harvester {
 	}
 
 	public boolean learn( String HTMLBody, String host, String path ) {
+		
+		Map<NodeItem, Integer > map = null;
 		boolean result = false;
 		Storage storage = null;
-		Map<NodeItem, Integer > map = null;
+
 		try {			
 			storage = (Storage) connClass.getConstructor( String.class, String.class ).newInstance( host, path );
 		} catch( Exception e ) {
@@ -74,13 +79,12 @@ public class Harvester {
 
 
 		try{
-			Node pageNode;
-			pageNode = NodeUtil.parseDom( HTMLBody );
+			Node pageNode = NodeUtil.parseDom( HTMLBody );
 
-			readAllNodes( storage, node , xpath );			
+			readAllNodes( storage, pageNode , "html/body" );			
 			map = storage.getAllFreq();
 
-			updateNodes( storage, map, node, xpath );
+			updateNodes( storage, map, pageNode, "html/body" );
 			
 			storage.pageEnd();
 
@@ -130,12 +134,13 @@ public class Harvester {
 
 	
 	public void updateNodes( final Storage storage, final Map<NodeItem,Integer> map, final Node node, final String xpath ) {
-		NodeItem item = New NodeItem( xpath.hashCode(), node.hashCode() );
-		Integer fq = map.get( NodeItem );
+		NodeItem item = new NodeItem( xpath.hashCode(), node.hashCode() );
+		Integer fq = map.get( item );
 		
-		if( null = fq ||  fq < 1 ) {
+		if( null == fq ||  fq < 1 ) {
 			// TODO fix this
 			// storage.addNode( )
+			// no adding, cache threshold wouldn't apply
 			
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 				updateNodes( storage, map, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
@@ -143,18 +148,18 @@ public class Harvester {
 		}
 	}
 	
-	@deprecated
+	// @deprecated
 	private void readNode( Storage k, Node node, String xpath ) {
 		
-
-
-		int hash = node.toString().hashCode();
+		// int hash = node.toString().hashCode();
+		int hash = node.hashCode();
 		boolean nodeExist = true;
 
-		if( 32 == hash ) return;
+		// we don't know the hash 
+		// if( 32 == hash ) return;
 
 		try{
-			nodeExist = k.addNode( hostId, pathId, hash, xpath );
+			nodeExist = k.addNode( xpath, hash );
 
 
 		}catch(Exception e){
@@ -165,7 +170,7 @@ public class Harvester {
 		if( nodeExist && (node.childNodeSize() > 0 )) {
 
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
-				readNode( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ), pathId, hostId );
+				readNode( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
 			}
 		}
 

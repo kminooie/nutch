@@ -18,10 +18,10 @@
 -->
 <property>
  <name>doslocos.training.storage.class</name>
- <value>com.doslocos.nutch.datamining.ConnectRedis</value>
+ <value>com.doslocos.nutch.harvester.ConnectRedis</value>
  <description>
- for mysql : com.doslocos.nutch.datamining.ConnectMysql
- for redis : com.doslocos.nutch.datamining.ConnectRedis  
+ for mysql : com.doslocos.nutch.harvester.ConnectMysql
+ for redis : com.doslocos.nutch.harvester.ConnectRedis  
  </description>
 </property>
 

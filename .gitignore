@@ -7,9 +7,12 @@ runtime/
 logs/
 /bin/
 
-#
+# git-bash-prompt
+.bash-git-rc 
+
 
 # eclipse file
 .classpath
 .project
+
 

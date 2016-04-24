@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
+import java.util.HashMap;
 
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.hadoop.conf.Configuration;
@@ -16,17 +17,17 @@ import org.slf4j.LoggerFactory;
 
 public class ConnectMysql extends Storage {
 
-	private static BasicDataSource poolDS;
-	public Connection conn = null;
+	static private BasicDataSource poolDS;
+	static private int batchSize = 0;
+
+	static public final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
 	
+	private Connection conn = null;
 	private PreparedStatement  psNode, psFrequency, psGetFreq;
 	private ResultSet tempRs = null;
-	private int dirtyItems = 0;
-	private int batchSize = 0;
-
-	public static final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
-
-	public static void set( Configuration conf ) {
+	private int newItems = 0;
+	
+	static public void set( Configuration conf ) {
 		String DBHOST = conf.get("doslocos.harvester.database.host", "localhost" );
 		String SCHEMA = conf.get("doslocos.harvester.database.schema", "nutch_harvester_db" );
 		String USER = conf.get("doslocos.harvester.database.username", "root" );
@@ -62,17 +63,22 @@ public class ConnectMysql extends Storage {
 		super( host, path );
 		checkConnection();
 		
-		psGetFreq = conn.prepareStatement( 
-			"SELECT count( url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath_id=? ;" 
-		);
-		
-		psNode = conn.prepareStatement( 
-			"INSERT INTO nodes ( host_id, hash, xpath_id ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
-			, Statement.RETURN_GENERATED_KEYS
-		);
-		
-		psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id, url_id ) VALUES (?, ?);" );
-		
+		try {
+			psGetFreq = conn.prepareStatement( 
+				"SELECT count( url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath_id=? ;" 
+			);
+			
+			psNode = conn.prepareStatement( 
+				"INSERT INTO nodes ( host_id, hash, xpath_id ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
+				, Statement.RETURN_GENERATED_KEYS
+			);
+			
+			psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id, url_id ) VALUES (?, ?);" );
+			
+		} catch( Exception e ) {
+			LOG.error( "while preparing statements: ", e );
+		}
+
 		LOG.debug("Connection class created");
 	}
 
@@ -105,11 +111,11 @@ public class ConnectMysql extends Storage {
 
 
 
-	@Override
-	public boolean addNode( Integer xpathId, Integer hash ) {
+	// @Override
+	public boolean addNode( String xpath, Integer hash ) {
 	
 		boolean result = true;
-
+		Integer xpathId = stringToId( xpath );
 		checkConnection();
 
 		try {			
@@ -119,14 +125,14 @@ public class ConnectMysql extends Storage {
 
 			psNode.addBatch();
 			
-			++ dirtyItems;
+			++ newItems;
 
 		}catch(Exception e){
 			LOG.error( "Error while adding a id in frequency table" , e  );
 			result = false;
 		}
 		
-		if( 0 == dirtyItesm % batchSize ) 
+		if( 0 == newItems % batchSize ) 
 			pageEnd();
 
 		return result;

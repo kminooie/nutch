@@ -1,14 +1,15 @@
 package com.doslocos.nutch.harvester;
 
 
+import java.util.Map;
+import java.util.HashMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
-
-import java.util.Map;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
@@ -93,12 +94,12 @@ public class ConnectRedis extends Storage {
 	
 	
 	@Override
-	public boolean addNode(int hostId, int pathId, int hash, String xpath) {
+	public boolean addNode( String xpath, Integer hash ) {
 
 		boolean result = false;
 		boolean achived = false;
 
-		String xpathHashCode = Integer.toString( xpath.hashCode() );
+		String xpathHashCode = stringToId( xpath ).toString();
 
 		String nodeKey = Integer.toString( hash ) + "_" + Integer.toString( hostId ) + "_" + xpathHashCode;
 
@@ -181,7 +182,7 @@ public class ConnectRedis extends Storage {
 
 
 	@Override
-	public boolean emptyBatch(int pathId) {
+	public boolean pageEnd() {
 		// TODO Auto-generated method stub
 		return false;
 	}

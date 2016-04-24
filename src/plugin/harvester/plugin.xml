@@ -16,13 +16,13 @@
  limitations under the License.
 -->
 <plugin
-   id="datamining"
-   name="Html datamining plug in"
-   version="0.0.1"
-   provider-name="nutch.org">
+   id="harvester"
+   name="harvester plug in"
+   version="0.0.3"
+   provider-name="doslocos">
 
    <runtime>
-      <library name="datamining.jar">
+      <library name="harvester.jar">
          <export name="*"/>
       </library>
       
@@ -40,12 +40,12 @@
    </requires>
 
 
-   <extension id="com.doslocos.nutch.datamining.TrainigPart"
+   <extension id="com.doslocos.nutch.harvester.TrainigPart"
               name="Training Part"
               point="org.apache.nutch.parse.HtmlParseFilter">
 
       <implementation id="TrainingPart"
-                      class="com.doslocos.nutch.datamining.TrainingPart">
+                      class="com.doslocos.nutch.harvester.TrainingPart">
       
         <parameter name="contentType" value="text/html|application/xhtml+xml"/>
         <parameter name="pathSuffix" value=""/>
@@ -54,12 +54,12 @@
 
    </extension>
 
-   <extension id="com.doslocos.nutch.datamining.IndexingPart"
+   <extension id="com.doslocos.nutch.harvester.IndexingPart"
               name="Indexing Part"
               point="org.apache.nutch.indexer.IndexingFilter">
 
       <implementation id="IndexingPart"
-                      class="com.doslocos.nutch.datamining.IndexingPart">
+                      class="com.doslocos.nutch.harvester.IndexingPart">
         
         <parameter name="contentType" value="text/html|application/xhtml+xml"/>
         <!--parameter name="pathSuffix" value=""/-->
