@@ -1,4 +1,4 @@
-package com.doslocos.nutch.harvester;
+package com.doslocos.nutch.harvester.storage;
 
 
 import java.util.Map;
@@ -7,6 +7,9 @@ import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.doslocos.nutch.harvester.NodeItem;
+
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -14,51 +17,47 @@ import redis.clients.jedis.JedisPoolConfig;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 
-public class ConnectRedis extends Storage {
+public class Redis extends Storage {
 
 
-	public static final Logger LOG = LoggerFactory.getLogger( ConnectRedis.class );
+	public static final Logger LOG = LoggerFactory.getLogger( Redis.class );
 
-	private static String hostAdd; 
-	private static int redisPort, dbNumber, dbTimeOut, setMaxTotal, setMaxIdle;
-	private static boolean setTestOnBorrow, setTestOnReturn, setTestWhileIdle;
-	private static int freq_treshold;
+	private static int dbNumber;
 	public static JedisPool pool;
 	public static JedisPoolConfig poolConfig;
 
 	public Jedis jedis;
 
-	public ConnectRedis( String host, String path ) {
+	public Redis( String host, String path ) {
 		super( host, path );
 	}
 
 	public static void set(Configuration conf){
+		LOG.info( "Initilizing Redis storage." );
+		
+		String redisHost = conf.get( "doslocos.harvester.redis.host", "localhost" );
+		int redisPort = conf.getInt( "doslocos.harvester.redis.port", 6379 );
+		int redisDb = conf.getInt( "doslocos.harvester.redis.db", 15 );
+		int redisTimeOut = conf.getInt( "doslocos.harvester.redis.dbTimeOut", 0 );
+		LOG.info( "host:" + redisHost + ":" + redisPort +" db:"+ redisDb + " timeout:" + redisTimeOut );
+		
+		boolean setTestOnBorrow = conf.getBoolean( "doslocos.harvester.redis.setTestOnBorrow", true );
+		boolean setTestOnReturn = conf.getBoolean( "doslocos.harvester.redis.setTestOnReturn", true );
+		boolean setTestWhileIdle = conf.getBoolean( "doslocos.harvester.redis.setTestWhileIdle", true );
+		int setMaxTotal = conf.getInt( "doslocos.harvester.redis.setMaxTotal",128);
+		int setMaxIdle = conf.getInt( "doslocos.harvester.redis.setMaxIdle",128);
+		LOG.info( "Pool: onBorrow:" + setTestOnBorrow + "  onReturn:" + setTestOnReturn + " whileIdle:" + setTestWhileIdle );
+		LOG.info( "Pool: MaxTotal:" + setMaxTotal + " MaxIdle:" + setMaxIdle );
 
-		if( null == poolConfig) {
+		poolConfig = new JedisPoolConfig();
 
-			hostAdd = conf.get( "doslocos.training.redisDb.urlConnection", "127.0.0.1" );
-			redisPort = conf.getInt( "doslocos.training.redisDb.portNumber", 6379 );
-			dbNumber = conf.getInt( "doslocos.training.redisDb.dbNumber", 15 );
-			dbTimeOut = conf.getInt( "doslocos.training.redisDb.dbTimeOut", 0 );
-			setTestOnBorrow = conf.getBoolean( "doslocos.training.redisDb.setTestOnBorrow", true );
-			setTestOnReturn = conf.getBoolean( "doslocos.training.redisDb.setTestOnReturn", true );
-			setTestWhileIdle = conf.getBoolean( "doslocos.training.redisDb.setTestWhileIdle", true );
-			setMaxTotal = conf.getInt( "doslocos.training.redisDb.setMaxTotal",128);
-			setMaxIdle = conf.getInt( "doslocos.training.redisDb.setMaxIdle",128);
+		poolConfig.setTestOnBorrow( setTestOnBorrow );
+		poolConfig.setTestOnReturn( setTestOnReturn );
+		poolConfig.setTestWhileIdle( setTestWhileIdle);
+		poolConfig.setMaxTotal( setMaxTotal ); 
+		poolConfig.setMaxIdle( setMaxIdle );  
 
-			freq_treshold = conf.getInt( "doslocos.training.frequency_threshould" , 2  );
-
-			poolConfig = new JedisPoolConfig();
-
-			poolConfig.setTestOnBorrow( setTestOnBorrow );
-			poolConfig.setTestOnReturn( setTestOnReturn );
-			poolConfig.setTestWhileIdle( setTestWhileIdle);
-			poolConfig.setMaxTotal( setMaxTotal ); 
-			poolConfig.setMaxIdle( setMaxIdle );  
-
-			pool = new JedisPool( poolConfig, hostAdd, redisPort, dbTimeOut );	
-
-		}
+		pool = new JedisPool( poolConfig, redisHost, redisPort, redisTimeOut );	
 
 		// initConnection();
 	}
@@ -111,7 +110,7 @@ public class ConnectRedis extends Storage {
 		while( ! achived ) {
 			try{
 
-				counter ++;
+				++counter;
 
 				int  pathAdded = jedis.sadd( nodeKey.getBytes(), PathIdString.getBytes()).intValue();
 
@@ -142,6 +141,8 @@ public class ConnectRedis extends Storage {
 		}
 		return result;
 	}
+	
+	
 
 	@Override
 	public int getNodeFreq(int hostId, int hash, String xpath) {
@@ -166,6 +167,8 @@ public class ConnectRedis extends Storage {
 
 		return freq;
 	}
+	
+	
 
 
 	protected void finalize(){
@@ -179,6 +182,8 @@ public class ConnectRedis extends Storage {
 		}
 
 	}
+	
+	
 
 
 	@Override

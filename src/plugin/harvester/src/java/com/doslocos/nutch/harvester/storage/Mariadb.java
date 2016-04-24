@@ -1,4 +1,4 @@
-package com.doslocos.nutch.harvester;
+package com.doslocos.nutch.harvester.storage;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -14,13 +14,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.doslocos.nutch.harvester.NodeItem;
 
-public class ConnectMysql extends Storage {
+
+public class Mariadb extends Storage {
 
 	static private BasicDataSource poolDS;
-	static private int batchSize = 0;
 
-	static public final Logger LOG = LoggerFactory.getLogger( ConnectMysql.class );
+	static public final Logger LOG = LoggerFactory.getLogger( Mariadb.class );
 	
 	private Connection conn = null;
 	private PreparedStatement  psNode, psFrequency, psGetFreq;
@@ -28,13 +29,12 @@ public class ConnectMysql extends Storage {
 	private int newItems = 0;
 	
 	static public void set( Configuration conf ) {
-		String DBHOST = conf.get("doslocos.harvester.database.host", "localhost" );
-		String SCHEMA = conf.get("doslocos.harvester.database.schema", "nutch_harvester_db" );
-		String USER = conf.get("doslocos.harvester.database.username", "root" );
-		String PASS = conf.get("doslocos.harvester.database.password", "" );
+		String DBHOST = conf.get("doslocos.harvester.mariadb.host", "localhost" );
+		String SCHEMA = conf.get("doslocos.harvester.mariadb.schema", "nutch_harvester_db" );
+		String USER = conf.get("doslocos.harvester.mariadb.username", "root" );
+		String PASS = conf.get("doslocos.harvester.mariadb.password", "" );
 		
-		batchSize = conf.getInt( "doslocos.harvester.database.batchsize", 500 );
-
+		
 		LOG.info( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
 
 		poolDS = new BasicDataSource();
@@ -59,7 +59,7 @@ public class ConnectMysql extends Storage {
 		Storage.set( conf );
 	}
 
-	public ConnectMysql( String host, String path ) {
+	public Mariadb( String host, String path ) {
 		super( host, path );
 		checkConnection();
 		

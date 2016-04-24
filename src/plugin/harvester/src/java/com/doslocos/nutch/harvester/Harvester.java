@@ -10,6 +10,7 @@ import org.apache.hadoop.conf.Configuration;
 // import org.jsoup.select.Elements;        
 import org.jsoup.nodes.Node;
 
+import com.doslocos.nutch.harvester.storage.Storage;
 import com.doslocos.nutch.util.NodeUtil;
 
 import org.slf4j.Logger;
@@ -17,11 +18,10 @@ import org.slf4j.LoggerFactory;
 
 public class Harvester {
 
-	static private int frequency_threshould ;
-	
 	static public final Logger LOG = LoggerFactory.getLogger( Harvester.class );
 
-	private int hostId, pathId ;
+	private int frequency_threshould ;
+
 	private String connClassName;
 	private Class<?> connClass;
 	private Configuration conf ;
@@ -60,28 +60,23 @@ public class Harvester {
 		this.conf = conf;		
 	}
 
+	
 	public void die() {
 		System.exit( 1 );
 	}
 
+	
 	public boolean learn( String HTMLBody, String host, String path ) {
 		
 		Map<NodeItem, Integer > map = null;
 		boolean result = false;
-		Storage storage = null;
-
-		try {			
-			storage = (Storage) connClass.getConstructor( String.class, String.class ).newInstance( host, path );
-		} catch( Exception e ) {
-			LOG.error( "Got exception while loading storage class: ", e );
-		}
-		storage.counter = 0;
-
+		
+		Storage storage = getStorage( host, path );
 
 		try{
 			Node pageNode = NodeUtil.parseDom( HTMLBody );
 
-			readAllNodes( storage, pageNode , "html/body" );			
+			readAllNodes( storage, pageNode, "html/body" );			
 			map = storage.getAllFreq();
 
 			updateNodes( storage, map, pageNode, "html/body" );
@@ -99,33 +94,48 @@ public class Harvester {
 	}
 
 
-	public String filter( String rawcontent, String host ) {
+	public String filter( String HTMLBody, String host ) {
 
-		Storage k = null;
+		Map<NodeItem, Integer > map = null;
+		String result = null;
+		
+		Storage storage = getStorage( host, null );
 
-		try {
-			Class<?> implClass = Class.forName( connClassName );
-			k = (Storage) implClass.getConstructor( Configuration.class ).newInstance( conf );
-		} catch( Exception e ) {
-			LOG.error( "Got exception while loading storage class: ", e );
+		try{
+			Node pageNode = NodeUtil.parseDom( HTMLBody );
+
+			result = filterNode( storage, pageNode, "html/body" );
+
+		}catch( Exception e ){
+			LOG.error( "Exception while filtering host: " + host, e );
 		}
-		k.counter = 0;
 
-		hostId=host.hashCode();
-
-		Node nodePage = NodeUtil.parseDom( rawcontent );
-
-		String result = checkNode( k, nodePage, "html/body", hostId );
-
-		LOG.debug( "number of db roundtrip while filtering: " + k.counter + " ,url : "+ host);
+		LOG.debug( "number of db roundtrip while filtering: " + storage.counter + " ,url : "+ host);
 
 		return result;
 	}
 
+	
+	private Storage getStorage( String host, String path ) {
+		Storage storage = null;
 
-	public void readAllNodes( Storage k, Node node, String xpath ) {
+		try {			
+			storage = (Storage) connClass.getConstructor( String.class, String.class ).newInstance( host, path );
+		} catch( Exception e ) {
+			LOG.error( "Failed to instanciate storage: ", e );
+			die();
+		}
+		
+		return storage;
+	}
+	
+
+	
+	private void readAllNodes( Storage k, Node node, String xpath ) {
 		Integer hash = node.hashCode();
-		if( 32 == hash ) return;
+		
+		// if( 32 == hash ) return;
+		
 		k.addNodeToList( xpath.hashCode(), hash );
 		for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 			readAllNodes( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
@@ -133,7 +143,8 @@ public class Harvester {
 	}
 
 	
-	public void updateNodes( final Storage storage, final Map<NodeItem,Integer> map, final Node node, final String xpath ) {
+	
+	private void updateNodes( final Storage storage, final Map<NodeItem,Integer> map, final Node node, final String xpath ) {
 		NodeItem item = new NodeItem( xpath.hashCode(), node.hashCode() );
 		Integer fq = map.get( item );
 		
@@ -148,7 +159,9 @@ public class Harvester {
 		}
 	}
 	
-	// @deprecated
+	
+	
+	@Deprecated
 	private void readNode( Storage k, Node node, String xpath ) {
 		
 		// int hash = node.toString().hashCode();
@@ -164,7 +177,7 @@ public class Harvester {
 
 		}catch(Exception e){
 
-			LOG.debug("Error happened during add a node :"+xpath +"   "+hostId+"   "+ pathId+"   "+ hash, e);
+			LOG.debug("Error happened during add a node :"+xpath +"   "+ hash, e);
 		}
 
 		if( nodeExist && (node.childNodeSize() > 0 )) {
@@ -177,23 +190,26 @@ public class Harvester {
 	}
 
 
-	private String checkNode( Storage k, Node node, String xpath, int hostId ) {
+	
+	private String filterNode( final Storage storage, final Map<NodeItem,Integer> map, final Node node, final String xpath ) {
 		int hash = node.hashCode();
 		String content = "";
 
-		if( 32 == hash ) return content;
+		// if( 32 == hash ) return content;
 
-		int freq = k.getNodeFreq( hostId, hash, xpath );
+		int freq = storage.getNodeFreq( hostId, hash, xpath );
+		int freq = map.get( new storage.getNodeFreq( hostId, hash, xpath );
 		if( freq < frequency_threshould ) {
 			content = NodeUtil.extractText( node );
 
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){
 				String newXpath = xpath + "/" + NodeUtil.xpathMaker( node.childNode( i ) );
-				content = content + " " + checkNode( k, node.childNode( i ), newXpath, hostId );
+				content = content + " " + filterNode( storage, node.childNode( i ), newXpath );
 			}		
 		}
 
 		return content.trim();
 	}
+
 
 }

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration>
+<property>
+ <name>doslocos.harvester.frequency_threshould</name>
+ <value>2</value>
+ <description>its the frequency that divided nodes as common nodes and unique nodes
+ </description>
+</property>
+
+<!--
+<property>
+ <name>doslocos.harvester.selector</name>
+ <value>script,style,option,input,form,meta,input,select,appserver,button,comment,#comment,#text,noscript,server,timestamp,.hidden</value>
+ <description>html node and ids and classes that would be ignored. refer to org.jsoup.Jsoup
+ </description>
+</property>
+-->
+
+<property>
+ <name>doslocos.harvester.storage.class</name>
+ <value>com.doslocos.nutch.harvester.storage.Redis</value>
+ <description>
+ for mysql : com.doslocos.nutch.harvester.storage.Mariadb
+ for redis : com.doslocos.nutch.harvester.storage.Redis  
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.cache.size</name>
+ <value>0</value>
+ <description>number of items ( nodes ) cache should hold. 0 would disable the cache  
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.cache.loadfactor</name>
+ <value>0.8</value>
+ <description>
+ desired cache memory load factor  
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.cache.threshold</name>
+ <value>100</value>
+ <description>
+ minimum frequency for a node to be cached 
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.storage.batchsize</name>
+ <value>100</value>
+ <description>
+ number of items in each batch  
+ </description>
+</property>
+
+<!-- mysql database authentication -->
+<property>
+ <name>doslocos.harvester.mariadb.host</name>
+ <value>localhost</value>
+ <description> its Mariadb host address</description>
+</property>
+
+<property>
+ <name>doslocos.harvester.mariadb.schema</name>
+ <value>nutch_harvester_db</value>
+ <description>its the name of your database in the sql
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.mariadb.username</name>
+ <value>root</value>
+ <description> its database username that you must add in your sql
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.mariadb.password</name>
+ <value></value>
+ <description>its database password you must change it for connection to database
+ </description>
+</property>
+
+<!-- configuration for Redis Database -->
+
+<property>
+ 	<name>doslocos.harvester.redis.host</name>
+ 	<value>localhost</value>
+	<description>hostname
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.redis.port</name>
+	<value>6379</value>
+	<description>Redis port number
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.redis.dbTimeOut</name>
+	<value>0</value>
+	<description>time out in seconds
+	</description>
+</property>
+
+<property>
+ <name>doslocos.harvester.redis.db</name>
+ <value>0</value>
+ <description>database number
+ </description>
+</property>
+
+ 
+<property>
+	<name>doslocos.harvester.redis.setTestOnBorrow</name>
+	<value>false</value>
+	<description>refer to jedis pool configurati
+ 	</description>
+</property>
+
+
+<property>
+	<name>doslocos.harvester.redis.setTestOnReturn</name>
+	<value>false</value>
+	<description>its the number of your database in Redis
+	</description>
+</property>
+
+
+<property>
+	<name>doslocos.harvester.redis.setTestWhileIdle</name>
+	<value>false</value>
+	<description>its the number of your database in Redis
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.redis.setMaxTotal</name>
+	<value>15</value>
+	<description>refer to jedis pool configuration, should be, at most, as big as the
+	number of fetcher threads
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.redis.setMaxIdle</name>
+	<value>8</value>
+	<description>refer to jedis pool configuration
+	</description>
+</property>
+
+</configuration>

@@ -1,4 +1,4 @@
-package com.doslocos.nutch.harvester;
+package com.doslocos.nutch.harvester.storage;
 
 
 import org.apache.hadoop.conf.Configuration;
@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.doslocos.nutch.util.LRUCache;
+import com.doslocos.nutch.harvester.CacheItem;
 import com.doslocos.nutch.harvester.NodeItem;
 
 
@@ -14,18 +15,23 @@ import org.slf4j.LoggerFactory;
 
 
 public abstract class Storage {
+	
+	static public int bCounter = 0;
+	
+	static protected LRUCache< CacheItem, Integer > cache;
+	static protected int cacheThreshould, batchSize = 0;
+	
+	
 	public int counter = 0;
-	public static int bCounter=0;
-
+	
 	public String host;
 	public String path;
 
 	public Integer hostId;
 	public Integer pathId;
 
-	protected static LRUCache< CacheItem, Integer > cache;
-	protected static int cacheThreshould;
-
+	
+	
 	/**
 	 * would contain all the nodes for this object page ( host + path )
 	 */
@@ -34,12 +40,15 @@ public abstract class Storage {
 
 
 	public static void set( Configuration conf ) {
-		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshould" , 100  );
+		
 		int cacheSize = conf.getInt( "doslocos.harvester.cache.size" , 0  );
-		float loadFactor = conf.getFloat( "doslocos.harvester.cache.loadfactor" , 0.8f );
+		float loadFactor = conf.getFloat( "doslocos.harvester.cache.loadfactor" , 0.8f );		
+		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
+		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 500 );
 
 		if( cacheSize > 0 ) {
 			cache = new LRUCache< CacheItem, Integer >( cacheSize, loadFactor );
+			LOG.info( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
 		}
 
 	}

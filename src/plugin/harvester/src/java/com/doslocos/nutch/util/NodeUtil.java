@@ -1,5 +1,5 @@
 /**
- * Utility class for manuplating node
+ * Utility class for manipulating node
  *
  */
 
