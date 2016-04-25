@@ -14,7 +14,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.doslocos.nutch.harvester.NodeItem;
+import com.doslocos.nutch.harvester.PageNodeId;
 
 
 public class Mariadb extends Storage {
@@ -142,8 +142,8 @@ public class Mariadb extends Storage {
 	protected void addToBackendList( Integer xpath, Integer hash ) { 
 		
 	}
-	protected Map<NodeItem, Integer> getBackendFreq() {
-		return new HashMap<NodeItem, Integer>();
+	protected Map<PageNodeId, Integer> getBackendFreq() {
+		return new HashMap<PageNodeId, Integer>();
 	}
 	
 	@Override

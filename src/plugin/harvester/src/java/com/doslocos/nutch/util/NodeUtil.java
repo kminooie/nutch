@@ -21,20 +21,18 @@ public class NodeUtil {
 		Document doc = Jsoup.parse( page_content );
 		doc.select( selectList ).remove();
 		Elements ele = doc.getElementsByTag( "body" );
-		Node node1 = ele.get( 0 );
-		return node1;
-
+		return ele.get( 0 );
 	}
 
 
 	public static String xpathMaker( Node node ) {
 
-		int fre=1;
-		Node ft=node;
-		for(int count=node.siblingIndex();count>0;count--){
-			ft=ft.previousSibling();
-			if(ft.nodeName()==node.nodeName()){
-				fre++;
+		int fre = 1;
+		Node ft = node;
+		for( int count = node.siblingIndex(); count > 0; --count ) {
+			ft = ft.previousSibling();
+			if( ft.nodeName() == node.nodeName() ) {
+				++fre;
 			}		
 		}
 

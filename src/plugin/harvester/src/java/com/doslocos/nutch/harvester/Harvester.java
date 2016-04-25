@@ -24,7 +24,6 @@ public class Harvester {
 
 	private String connClassName;
 	private Class<?> connClass;
-	private Configuration conf ;
 	
 
 	public Harvester( Configuration conf ){
@@ -49,15 +48,13 @@ public class Harvester {
 		try {
 			connClass = Class.forName( connClassName );
 
-			Method set = connClass.getMethod( "set" );
+			Method set = connClass.getMethod( "set", Configuration.class );
 			set.invoke( null, conf );
 
 		} catch( Exception e ) {
 			LOG.error( "Got exception while setting storage class: ", e );
 			die();
 		}
-
-		this.conf = conf;		
 	}
 
 	
@@ -68,7 +65,7 @@ public class Harvester {
 	
 	public boolean learn( String HTMLBody, String host, String path ) {
 		
-		Map<NodeItem, Integer > map = null;
+		Map<PageNodeId, Integer > map = null;
 		boolean result = false;
 		
 		Storage storage = getStorage( host, path );
@@ -96,15 +93,18 @@ public class Harvester {
 
 	public String filter( String HTMLBody, String host ) {
 
-		Map<NodeItem, Integer > map = null;
+		Map<PageNodeId, Integer > map = null;
 		String result = null;
 		
 		Storage storage = getStorage( host, null );
 
 		try{
 			Node pageNode = NodeUtil.parseDom( HTMLBody );
+			
+			readAllNodes( storage, pageNode, "html/body" );			
+			map = storage.getAllFreq();
 
-			result = filterNode( storage, pageNode, "html/body" );
+			result = filterNode( storage, map, pageNode, "html/body" );
 
 		}catch( Exception e ){
 			LOG.error( "Exception while filtering host: " + host, e );
@@ -144,8 +144,8 @@ public class Harvester {
 
 	
 	
-	private void updateNodes( final Storage storage, final Map<NodeItem,Integer> map, final Node node, final String xpath ) {
-		NodeItem item = new NodeItem( xpath.hashCode(), node.hashCode() );
+	private void updateNodes( final Storage storage, final Map<PageNodeId,Integer> map, final Node node, final String xpath ) {
+		PageNodeId item = new PageNodeId( xpath.hashCode(), node.hashCode() );
 		Integer fq = map.get( item );
 		
 		if( null == fq ||  fq < 1 ) {
@@ -158,53 +158,24 @@ public class Harvester {
 			}
 		}
 	}
-	
-	
-	
-	@Deprecated
-	private void readNode( Storage k, Node node, String xpath ) {
-		
-		// int hash = node.toString().hashCode();
-		int hash = node.hashCode();
-		boolean nodeExist = true;
-
-		// we don't know the hash 
-		// if( 32 == hash ) return;
-
-		try{
-			nodeExist = k.addNode( xpath, hash );
-
-
-		}catch(Exception e){
-
-			LOG.debug("Error happened during add a node :"+xpath +"   "+ hash, e);
-		}
-
-		if( nodeExist && (node.childNodeSize() > 0 )) {
-
-			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
-				readNode( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
-			}
-		}
-
-	}
 
 
 	
-	private String filterNode( final Storage storage, final Map<NodeItem,Integer> map, final Node node, final String xpath ) {
+	private String filterNode( final Storage storage, final Map<PageNodeId,Integer> map, final Node node, final String xpath ) {
 		int hash = node.hashCode();
 		String content = "";
 
 		// if( 32 == hash ) return content;
 
-		int freq = storage.getNodeFreq( hostId, hash, xpath );
-		int freq = map.get( new storage.getNodeFreq( hostId, hash, xpath );
+		int freq = map.get( new PageNodeId( xpath, hash ) );
+		
 		if( freq < frequency_threshould ) {
 			content = NodeUtil.extractText( node );
 
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){
-				String newXpath = xpath + "/" + NodeUtil.xpathMaker( node.childNode( i ) );
-				content = content + " " + filterNode( storage, node.childNode( i ), newXpath );
+				Node child = node.childNode( i );
+				String newXpath = xpath + "/" + NodeUtil.xpathMaker( child );
+				content = content + " " + filterNode( storage, map, child, newXpath );
 			}		
 		}
 

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <configuration>
+
+<!-- begin havester plugin -->
 <property>
  <name>doslocos.harvester.frequency_threshould</name>
  <value>2</value>
@@ -153,5 +155,7 @@
 	<description>refer to jedis pool configuration
 	</description>
 </property>
+
+<!-- end havester plugin -->
 
 </configuration>
