@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.doslocos.nutch.harvester.PageNodeId;
-
+import com.doslocos.nutch.harvester.NodeValue;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -31,7 +31,9 @@ public class Redis extends Storage {
 	/**
 	 * would contain all the nodes for this object page ( host + path )
 	 */
-	public final LinkedHashMap< PageNodeId, Integer> currentMap2 = new LinkedHashMap< PageNodeId, Integer>();
+	public final LinkedHashMap< PageNodeId, Integer> read = new LinkedHashMap< PageNodeId, Integer>();
+	public final LinkedHashMap< PageNodeId, Integer> write = new LinkedHashMap< PageNodeId, Integer>();
+	
 	private Jedis jedis;
 	private byte[] pathIdBytes = new byte[ Integer.BYTES ];
 	
@@ -102,9 +104,16 @@ public class Redis extends Storage {
 		addNode( new NodeId( pathId, id ) );
 	}
 
-	protected Map<PageNodeId, Integer> getBackendFreq() {
-		return currentMap2;
+	
+	protected void addToBackendList( NodeId id ) { 
+		// currentMap2.put( id, null );
+		addNode( id );
 	}
+	
+	
+//	protected Map<PageNodeId, NodeValue> getBackendFreq() {
+//		return read;
+//	}
 	
 	
 	public boolean addNode( NodeId id ) {
@@ -125,7 +134,7 @@ public class Redis extends Storage {
 				int freqPath = jedis.scard( nodeBytes ).intValue();
 
 				LOG.info( "adding " + id + " with fq:" + freqPath + " for path:" + path );
-				currentMap2.put( id.pageNodeId, freqPath );
+				read.put( id.pageNodeId, freqPath );
 
 				if( 1 == pathAdded ) {
 
@@ -136,7 +145,7 @@ public class Redis extends Storage {
 				}
 				
 				if( freqPath >= cacheThreshould ) {
-					cache.put( id, freqPath );
+					cache.put( id, new NodeValue(freqPath ));
 				}
 
 				achived = true;
@@ -201,6 +210,13 @@ public class Redis extends Storage {
 	public boolean pageEnd() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+
+	@Override
+	protected Map<PageNodeId, NodeValue> getBackendFreq() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

@@ -65,7 +65,7 @@ public class Harvester {
 	
 	public boolean learn( String HTMLBody, String host, String path ) {
 		
-		Map<PageNodeId, Integer > map = null;
+		Map<PageNodeId, NodeValue > map = null;
 		boolean result = false;
 		
 		Storage storage = getStorage( host, path );
@@ -93,7 +93,7 @@ public class Harvester {
 
 	public String filter( String HTMLBody, String host ) {
 
-		Map<PageNodeId, Integer > map = null;
+		Map<PageNodeId, NodeValue > map = null;
 		String result = null;
 		
 		Storage storage = getStorage( host, null );
@@ -134,9 +134,10 @@ public class Harvester {
 	private void readAllNodes( Storage k, Node node, String xpath ) {
 		Integer hash = node.hashCode();
 		
+		// we don't know the hash number
 		// if( 32 == hash ) return;
 		
-		k.addNodeToList( xpath.hashCode(), hash );
+		k.addNodeToList( xpath, hash );
 		for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 			readAllNodes( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
 		}
@@ -144,11 +145,11 @@ public class Harvester {
 
 	
 	
-	private void updateNodes( final Storage storage, final Map<PageNodeId,Integer> map, final Node node, final String xpath ) {
+	private void updateNodes( final Storage storage, final Map<PageNodeId, NodeValue> map, final Node node, final String xpath ) {
 		PageNodeId item = new PageNodeId( xpath.hashCode(), node.hashCode() );
-		Integer fq = map.get( item );
+		NodeValue val = map.get( item );
 		
-		if( null == fq ||  fq < 1 ) {
+		if( null == val ||  val.frequency < 1 ) {
 			// TODO fix this
 			// storage.addNode( )
 			// no adding, cache threshold wouldn't apply
@@ -161,15 +162,15 @@ public class Harvester {
 
 
 	
-	private String filterNode( final Storage storage, final Map<PageNodeId,Integer> map, final Node node, final String xpath ) {
+	private String filterNode( final Storage storage, final Map<PageNodeId, NodeValue> map, final Node node, final String xpath ) {
 		int hash = node.hashCode();
 		String content = "";
 
 		// if( 32 == hash ) return content;
 
-		int freq = map.get( new PageNodeId( xpath, hash ) );
+		NodeValue val  = map.get( new PageNodeId( xpath, hash ) );
 		
-		if( freq < frequency_threshould ) {
+		if( val.frequency < frequency_threshould ) {
 			content = NodeUtil.extractText( node );
 
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){
