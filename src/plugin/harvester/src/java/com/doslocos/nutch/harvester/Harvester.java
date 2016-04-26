@@ -147,9 +147,12 @@ public class Harvester {
 	
 	private void updateNodes( final Storage storage, final Map<PageNodeId, NodeValue> map, final Node node, final String xpath ) {
 		PageNodeId item = new PageNodeId( xpath.hashCode(), node.hashCode() );
+		
 		NodeValue val = map.get( item );
 		
-		if( null == val ||  val.frequency < 1 ) {
+		storage.incNodeFreq( item, val );
+		
+		if( null == val ||  val.frequency < frequency_threshould ) {
 			// TODO fix this
 			// storage.addNode( )
 			// no adding, cache threshold wouldn't apply

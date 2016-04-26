@@ -4,8 +4,9 @@ package com.doslocos.nutch.harvester.storage;
 import org.apache.hadoop.conf.Configuration;
 import org.mortbay.log.Log;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Vector;
 
 import com.doslocos.nutch.util.LRUCache;
@@ -29,8 +30,8 @@ public abstract class Storage {
 	/**
 	 * would contain all the nodes for this object page ( host + path )
 	 */
-	public final LinkedHashMap< PageNodeId, NodeValue> currentPage = new LinkedHashMap< PageNodeId, NodeValue>( 4000, .95f );
-	public final Vector< PageNodeId > exclusion = new Vector< PageNodeId>( 50 );
+	public final LinkedHashMap< PageNodeId, NodeValue> currentPage = new LinkedHashMap< PageNodeId, NodeValue>( 4000, .9f );
+	public final Vector< PageNodeId > exclusion = new Vector< PageNodeId>( 64 );
 
 	public int counter = 0;
 
@@ -47,7 +48,7 @@ public abstract class Storage {
 		float loadFactor = conf.getFloat( "doslocos.harvester.cache.loadfactor" , 0.8f );		
 		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
 
-		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 500 );
+		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 1000 );
 		LOG.info( "batch size:" + batchSize );
 		LOG.info( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
 
@@ -72,12 +73,6 @@ public abstract class Storage {
 	}
 
 
-
-	/**
-	 * would be called for every node in a given page
-	 * @param xpath 
-	 * @param hash node hash code
-	 */
 	public void addNodeToList( String path, int hash ) {
 		PageNodeId id = new PageNodeId( stringToId( path ), hash );
 		NodeId nid = new NodeId( hostId, id );
@@ -86,7 +81,7 @@ public abstract class Storage {
 		currentPage.put( id, val );
 
 		if( null == val && readBackend  ) {
-			addToBackendList( nid );
+			addToBackendList( id );
 		} else {
 			exclusion.add( id );
 		}
@@ -95,50 +90,31 @@ public abstract class Storage {
 
 
 	public Map<PageNodeId, NodeValue> getAllFreq() {
-		//		for( Map.Entry<PageNodeId, NodeValue> entry : currentPage.entrySet() ) {
-		//			NodeValue val = cache.get( new NodeId( hostId, entry.getKey() ) );
-		//			try {
-		//				if( null == val ) {
-		//					// prepare for database
-		//					addToBackendList( entry.getKey() ) ;
-		//
-		//				} else {
-		//					entry.setValue( val );
-		//				}
-		//			} catch( Exception e ) {
-		//				LOG.error( "I don't know either: ", e );
-		//			}
-		//		}
-
-		
-		
 		Log.info( "page cache size:" + currentPage.size() );
-		// TODO check the cache tershold
-		currentPage.putAll( getBackendFreq() );
+		
+		for( Map.Entry< PageNodeId, NodeValue > e:getBackendFreq().entrySet() ) {
+			NodeValue val = e.getValue();
+			
+			if( null == val ) {
+				LOG.error( "value is null. key:" + e.getKey() );
+			}
 
+			if( val.frequency > cacheThreshould ) {
+	    		cache.put( new NodeId( hostId, e.getKey() ), val );
+	    	}
+			
+			currentPage.put( e.getKey(),val );
+		}
+		
 		Log.info( "page cache size:" + currentPage.size() );
 		return currentPage;
 	}
 
-
-
-
-	/**
-	 * 
-	 * @param hostId
-	 * @param pathId
-	 * @param hash
-	 * @param xpath
-	 * @return boolean return false if node already existed, true if it has been added
-	 */
-	// public abstract boolean addNode( String xpath, int hash );
-
-	// public abstract int getNodeFreq( int hostId, int hash, String xpath );
-
+	
+	public abstract void incNodeFreq( PageNodeId id, NodeValue val );
 	public abstract boolean pageEnd();
 
 	protected abstract void addToBackendList( PageNodeId id );
-	protected abstract void addToBackendList( NodeId id );
-
 	protected abstract Map< PageNodeId, NodeValue > getBackendFreq();
+	
 }

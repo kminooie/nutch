@@ -4,7 +4,6 @@ package com.doslocos.nutch.harvester.storage;
 import java.util.Map;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
@@ -28,11 +27,7 @@ public class Redis extends Storage {
 	static private JedisPool pool;
 	static private JedisPoolConfig poolConfig;
 
-	/**
-	 * would contain all the nodes for this object page ( host + path )
-	 */
-	public final LinkedHashMap< PageNodeId, Integer> read = new LinkedHashMap< PageNodeId, Integer>();
-	public final LinkedHashMap< PageNodeId, Integer> write = new LinkedHashMap< PageNodeId, Integer>();
+	public final Map< PageNodeId, NodeValue > read = new HashMap< PageNodeId, NodeValue >( 1024 );
 	
 	private Jedis jedis;
 	private byte[] pathIdBytes = new byte[ Integer.BYTES ];
@@ -74,6 +69,7 @@ public class Redis extends Storage {
 	public Redis( String host, String path ) {
 		super( host, path );
 		ByteBuffer.wrap( pathIdBytes ).putInt( pathId );
+		initConnection();
 	}
 
 	
@@ -98,55 +94,57 @@ public class Redis extends Storage {
 		return result;
 
 	}
+	
+	
+	@Override
+	public void incNodeFreq( PageNodeId pid, NodeValue val ) {
 
-	protected void addToBackendList( PageNodeId id ) { 
-		// currentMap2.put( id, null );
-		addNode( new NodeId( pathId, id ) );
-	}
+		boolean achived = false;
+		int times = counter;
 
-	
-	protected void addToBackendList( NodeId id ) { 
-		// currentMap2.put( id, null );
-		addNode( id );
+		while( ! achived ) {
+			try{
+
+				++counter;
+				
+				NodeId id = new NodeId( hostId, pid );
+				byte nodeBytes[] = id.getBytes();
+				jedis.sadd( nodeBytes, pathIdBytes ).intValue();
+				achived = true;
+			}catch(Exception e){
+
+				LOG.error("error happen here for pageId :" + pid +" path: "+ path, e );
+				
+				initConnection();
+				if( counter > times + 3 ) {
+					LOG.error( "Can't resolve the issue by reinitilizing the connection" );
+					achived = true;
+				}
+			}
+		}
+
 	}
 	
 	
-//	protected Map<PageNodeId, NodeValue> getBackendFreq() {
-//		return read;
-//	}
-	
-	
-	public boolean addNode( NodeId id ) {
+	@Override
+	protected void addToBackendList( PageNodeId id ) {
 
 		boolean result = false;
 		boolean achived = false;
 
 		int times = counter;
 
-		initConnection();
+		// initConnection();
 		while( ! achived ) {
 			try{
 
 				++counter;
 				
 				byte nodeBytes[] = id.getBytes();
-				int pathAdded = jedis.sadd( nodeBytes, pathIdBytes ).intValue();
 				int freqPath = jedis.scard( nodeBytes ).intValue();
 
 				LOG.info( "adding " + id + " with fq:" + freqPath + " for path:" + path );
-				read.put( id.pageNodeId, freqPath );
-
-				if( 1 == pathAdded ) {
-
-//					if(freqPath < 2 ){
-						result=true;
-//
-//					}
-				}
-				
-				if( freqPath >= cacheThreshould ) {
-					cache.put( id, new NodeValue(freqPath ));
-				}
+				read.put( id, new NodeValue( freqPath ) );
 
 				achived = true;
 			}catch(Exception e){
@@ -155,43 +153,16 @@ public class Redis extends Storage {
 
 
 				initConnection();
-				if( counter > times + 2 ) {
+				if( counter > times + 3 ) {
 					LOG.error( "Can't resolve the issue by reinitilizing the connection" );
 					achived = true;
 				}
 			}
 		}
-		return result;
 	}
-	
-	
-
-	// @Override
-	public int getNodeFreq(int hostId, int hash, String xpath) {
 
 
-		int freq = 0;
-
-		String xpathHashCode = Integer.toString( xpath.hashCode() );
-
-		String nodeKey = Integer.toString( hash ) + "_" + Integer.toString( hostId ) + "_" + xpathHashCode;
-
-
-		try{
-			freq = jedis.scard( nodeKey.getBytes() ).intValue();
-
-		}catch(Exception e){
-
-			LOG.debug("error ocure during get node frequency"+"  ", e );
-
-		}
-		counter++;
-
-		return freq;
-	}
-	
-
-
+	@Override
 	protected void finalize(){
 		if( null != jedis ) {
 			try {
@@ -205,18 +176,16 @@ public class Redis extends Storage {
 	}
 	
 
-
 	@Override
 	public boolean pageEnd() {
-		// TODO Auto-generated method stub
-		return false;
+		LOG.info( "PageEnd was called" );
+		return true;
 	}
 
 
 	@Override
 	protected Map<PageNodeId, NodeValue> getBackendFreq() {
-		// TODO Auto-generated method stub
-		return null;
+		return read;
 	}
 
 }

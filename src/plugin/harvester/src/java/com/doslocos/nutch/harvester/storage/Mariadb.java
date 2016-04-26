@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -25,9 +26,11 @@ public class Mariadb extends Storage {
 	static public final Logger LOG = LoggerFactory.getLogger( Mariadb.class );
 
 	private Connection conn = null;
-	private PreparedStatement  psNode, psFrequency, psGetFreq, psPageNodes;
+	private PreparedStatement  psNode, psFrequency;
 	private ResultSet tempRs = null;
-	private int newItems = 0;
+	
+	private int newNodes = 0;
+	private int newUrls = 0;
 
 	static public void set( Configuration conf ) {
 		String DBHOST = conf.get("doslocos.harvester.mariadb.host", "localhost" );
@@ -65,9 +68,9 @@ public class Mariadb extends Storage {
 		checkConnection();
 
 		try {
-			psGetFreq = conn.prepareStatement( 
-					"SELECT count( url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath_id=? ;" 
-					);
+			// psGetFreq = conn.prepareStatement( 
+			// 		"SELECT count( url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath_id=? ;" 
+			// 		);
 
 			psNode = conn.prepareStatement( 
 					"INSERT INTO nodes ( host_id, hash, xpath_id ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
@@ -77,8 +80,8 @@ public class Mariadb extends Storage {
 			psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id, url_id ) VALUES (?, ?);"
 					);
 
-			psPageNodes = conn.prepareStatement( "SELECT xpath, hash, COUNT( url_id ) fq FROM ( SELECT f.node_id id , n.host_id host_id, n.xpath xpath, n.hash hash FROM nodes n, frequency f WHERE n.id = f.node_id and n.host_id = ? and f.url_id = ?) t  JOIN  frequency f2 ON ( f2.node_id = t.id ) GROUP BY f2.node_id ;"
-					);
+			// psPageNodes = conn.prepareStatement( "SELECT xpath, hash, COUNT( url_id ) fq FROM ( SELECT f.node_id id , n.host_id host_id, n.xpath xpath, n.hash hash FROM nodes n, frequency f WHERE n.id = f.node_id and n.host_id = ? and f.url_id = ?) t  JOIN  frequency f2 ON ( f2.node_id = t.id ) GROUP BY f2.node_id ;"
+			// 		);
 
 		} catch( Exception e ) {
 			LOG.error( "while preparing statements: ", e );
@@ -114,13 +117,10 @@ public class Mariadb extends Storage {
 	}
 
 
+	@Override
+	public void addToBackendList( PageNodeId id ) {
 
-
-	// @Override
-	public boolean addNode( PageNodeId id ) {
-
-		boolean result = true;
-		checkConnection();
+		// checkConnection();
 
 		try {			
 			psNode.setInt( 1, hostId );
@@ -129,79 +129,21 @@ public class Mariadb extends Storage {
 			
 			psNode.addBatch();
 
-			++ newItems;
+			++newNodes;
 
-		}catch(Exception e){
+		} catch(Exception e) {
 			LOG.error( "Error while adding a id in frequency table" , e  );
-			result = false;
 		}
 
-		if( 0 == newItems % batchSize ) 
-			pageEnd();
-
-		return result;
-
-	}
-
-	protected void addToBackendList( PageNodeId id ) { 
-
-	}
-
-	protected void addToBackendList( NodeId id ) {
-
+		if( 0 == newNodes % batchSize ) pageEnd();
 	}
 
 
-
-	//@Override
-	public ResultSet getNodeFreq( NodeId nid ) {
-
-		//	public int getNodeFreq( int hostId, int hash, String xpath ) {
-
-		//int result = 0;
-
-		checkConnection();
-		ResultSet rs=null;
-		try {
-			//			psGetFreq.setInt( 1, hostId );
-			//			psGetFreq.setInt( 2, hash );
-			//			psGetFreq.setInt(3, xpath.hashCode());
-			//
-			//			tempRs = psGetFreq.executeQuery();
-			//
-			//			if( tempRs.next() ) {
-			//				result = tempRs.getInt( 1 );
-			//
-			//			}else{
-			//				LOG.debug( "Node " + xpath + " from host:" +hostId + " with hash code:"+ hash +" is not in database." );
-			//			}
-
-			psPageNodes.setInt(1,nid.hostId);
-			psPageNodes.setInt(2,pathId);
-
-			tempRs = psPageNodes.executeQuery();
-			rs = psPageNodes.getResultSet();
-			//			while (rs.next()){
-			//				rs.getInt(1);
-			//				rs.getInt(2);
-			//				rs.getInt(3);
-			//
-			//
-			//			}
-			//			rs.close();
-
-
-		} catch (SQLException e) {
-			LOG.error("Exception while getting node frequency in adding a node: " , e);
-		}
-		counter++;
-		//return result;
-		return rs;
-	}
-
+	@Override
 	public boolean pageEnd(){
 
 		boolean result = false ;
+		checkConnection();
 		try {
 			int[] executeResult = psNode.executeBatch();
 
@@ -228,6 +170,8 @@ public class Mariadb extends Storage {
 	}
 	
 
+	
+	@Override
 	protected Map<PageNodeId, NodeValue> getBackendFreq() {
 	
 		String sql = "SELECT t.id id, xpath, hash, count(url_id ) fq FROM (" 
@@ -242,11 +186,14 @@ public class Mariadb extends Storage {
 		
 		sql = sql + nodeList + ") )t  JOIN  frequency f2 ON ( f2.node_id = t.id ) GROUP BY f2.node_id ";
 		
+		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >();
+		
 		checkConnection();
 		
 		try {
 			Statement stmt = conn.createStatement();
 	        ResultSet rs = stmt.executeQuery( sql );
+
 	        while( rs.next() ) {
 	        	int nid = rs.getInt( "id" );
 	        	PageNodeId pid = new PageNodeId( rs.getInt( "xpath" ), rs.getInt( "hash" ) );
@@ -254,20 +201,62 @@ public class Mariadb extends Storage {
 	        	
 	        	NodeValue val = new NodeValue( fq, nid);
 	        	
-	        	currentPage.put( pid, val );
-	        	
-	        	if( fq > cacheThreshould ) {
-	        		cache.put( new NodeId( hostId, pid ), val );
-	        	}
+	        	readFreq.put( pid, val );
 	        }
 		} catch( Exception e ) {
 			LOG.debug( "Got Exception:", e );
 		}
 		
-		return currentPage;
+		return readFreq;
 	}
 
 
+	@Override
+	public void incNodeFreq( PageNodeId id, NodeValue val ) {
+	
+		if( null == val ) {
+			try {
+				
+				psNode.setInt( 1, hostId );
+				psNode.setInt( 2, id.hash );
+				psNode.setInt( 3, id.xpathId );
+				
+				psNode.addBatch();
+	
+				++newNodes;
+	
+			} catch(Exception e) {
+				LOG.error( "Error while attempting to add a node" , e );
+			}
+		} else {
+			try {
+				psFrequency.setInt( 1, val.dbId );
+				psFrequency.setInt( 2, pathId );
+				
+				psFrequency.addBatch();
+				
+				++newUrls;
+				
+				// size of psFrequency updates are much smaller
+				if( 0 == newUrls % ( 3 * batchSize ) ) {
+					psFrequency.executeBatch();
+					++counter;
+				}
+				
+			} catch( Exception e ) {
+				LOG.error( "Error while adding a id in frequency table" , e );
+			}
+		}
+
+		if( 0 == newNodes % batchSize ) pageEnd();
+		
+		
+		
+	}
+
+
+	
+	@Override
 	protected void finalize(){
 		if (conn != null) {
 			try {
@@ -278,8 +267,6 @@ public class Mariadb extends Storage {
 			conn = null;
 		}
 	}
-
-
 
 }
 
