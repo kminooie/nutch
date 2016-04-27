@@ -1,11 +1,8 @@
-SET @UserName = 'dmuser';
-SET @PassWord = 'dmpass';
-SET @DBName = 'knowledge_base';
 
 
 CREATE SCHEMA IF NOT EXISTS nutch_harvester_db CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-GRANT ALL  ON knowledge_base.* TO 'dmuser'@'%' IDENTIFIED BY 'dmpass';
+GRANT ALL  ON nutch_harvester_db.* TO 'dmuser'@'%' IDENTIFIED BY 'dmpass';
 
 FLUSH PRIVILEGES;
 

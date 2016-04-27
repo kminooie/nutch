@@ -19,6 +19,23 @@
 </property>
 -->
 
+
+<property>
+	<name>doslocos.harvester.fieldname</name>
+	<value>rawcontent</value>
+	<description>it is the name of a field that you want to put new parsed text on it.
+	it must be set in solr schema too.
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.removefileds</name>
+	<value></value>
+	<description>the fields that you want to remove in Indexing part
+	</description>
+</property>
+
+
 <property>
  <name>doslocos.harvester.storage.class</name>
  <value>com.doslocos.nutch.harvester.storage.Redis</value>
@@ -155,6 +172,8 @@
 	<description>refer to jedis pool configuration
 	</description>
 </property>
+
+
 
 <!-- end havester plugin -->
 

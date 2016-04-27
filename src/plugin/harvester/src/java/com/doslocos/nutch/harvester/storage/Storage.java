@@ -2,10 +2,8 @@ package com.doslocos.nutch.harvester.storage;
 
 
 import org.apache.hadoop.conf.Configuration;
-import org.mortbay.log.Log;
 
 import java.util.Map;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Vector;
 
@@ -41,6 +39,7 @@ public abstract class Storage {
 	public int hostId;
 	public int pathId;
 
+	private int cacheHit = 0, cacheMissed = 0;
 
 	static public void set( Configuration conf ) {
 
@@ -51,6 +50,7 @@ public abstract class Storage {
 		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 1000 );
 		LOG.info( "batch size:" + batchSize );
 		LOG.info( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
+		LOG.info( "Initilizing cache threshold : " +cacheThreshould );
 
 		if( cacheSize < 1000 ) cacheSize = 1000;
 		
@@ -65,24 +65,27 @@ public abstract class Storage {
 		this.host = host;
 		hostId = stringToId( host );
 
-		this.path = path;
 		if ( null == path ){
 			path = "/" ;
+			LOG.info("a path with null value change to / value");
+
 		}
+		this.path = path;
 		pathId = stringToId( path );
 	}
 
 
-	public void addNodeToList( String path, int hash ) {
-		PageNodeId id = new PageNodeId( stringToId( path ), hash );
+	public void addNodeToList( String xpath, int hash ) {
+		PageNodeId id = new PageNodeId( stringToId( xpath ), hash );
 		NodeId nid = new NodeId( hostId, id );
 		NodeValue val = cache.get( nid );
 
-		currentPage.put( id, val );
-
-		if( null == val && readBackend  ) {
-			addToBackendList( id );
+		if( null == val ) {
+			++cacheMissed;
+			// addToBackendList( id );
 		} else {
+			++cacheHit;
+			currentPage.put( id, val );
 			exclusion.add( id );
 		}
 
@@ -90,9 +93,11 @@ public abstract class Storage {
 
 
 	public Map<PageNodeId, NodeValue> getAllFreq() {
-		Log.info( "page cache size:" + currentPage.size() );
+		LOG.info( "page cache size:" + currentPage.size() );
+		Map<PageNodeId, NodeValue> backendData = getBackendFreq();
+		LOG.info( "number of items read from backend:" + backendData.size() );
 		
-		for( Map.Entry< PageNodeId, NodeValue > e:getBackendFreq().entrySet() ) {
+		for( Map.Entry< PageNodeId, NodeValue > e:backendData.entrySet() ) {
 			NodeValue val = e.getValue();
 			
 			if( null == val ) {
@@ -106,7 +111,8 @@ public abstract class Storage {
 			currentPage.put( e.getKey(),val );
 		}
 		
-		Log.info( "page cache size:" + currentPage.size() );
+		LOG.info( "page cache size:" + currentPage.size() );
+		LOG.info( "hit:" + cacheHit + " missed:" + cacheMissed );
 		return currentPage;
 	}
 

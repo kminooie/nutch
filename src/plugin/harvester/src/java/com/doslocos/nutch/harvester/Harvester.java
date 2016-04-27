@@ -38,8 +38,8 @@ public class Harvester {
 		if( null == connClassName ) {
 			LOG.error( "storage class ( doslocos.harvester.storage.class ) is not set. this property is mandatory." );
 			LOG.error( "available options are:" );
-			LOG.error( "com.doslocos.nutch.harvester.ConnectMysql" );
-			LOG.error( "com.doslocos.nutch.harvester.ConnectRedis" );
+			LOG.error( "com.doslocos.nutch.harvester.storage.Mariadb" );
+			LOG.error( "com.doslocos.nutch.harvester.storage.Redis" );
 
 			die();
 		}
@@ -71,6 +71,7 @@ public class Harvester {
 		Storage storage = getStorage( host, path );
 
 		try{
+			
 			Node pageNode = NodeUtil.parseDom( HTMLBody );
 
 			readAllNodes( storage, pageNode, "html/body" );			
@@ -79,24 +80,24 @@ public class Harvester {
 			updateNodes( storage, map, pageNode, "html/body" );
 			
 			storage.pageEnd();
-
+			LOG.info("learning function finish for : "+ host+path);
 			result=true;
 		}catch( Exception e ){
 			LOG.error( "Exception while parsing host: " + host + " path: " + path, e );
 		}
 
-		LOG.debug( "number of db roundtrip while learning:" + storage.counter +"  "+host+path);
+		LOG.info( "number of db roundtrip while learning:" + storage.counter +"  "+host+path);
 
 		return result;
 	}
 
 
-	public String filter( String HTMLBody, String host ) {
-
+	public String filter( String HTMLBody, String host, String path ) {
+		LOG.info( "start filtering host: " + host + " path: " + path );
 		Map<PageNodeId, NodeValue > map = null;
 		String result = null;
 		
-		Storage storage = getStorage( host, null );
+		Storage storage = getStorage( host, path );
 
 		try{
 			Node pageNode = NodeUtil.parseDom( HTMLBody );
@@ -105,12 +106,12 @@ public class Harvester {
 			map = storage.getAllFreq();
 
 			result = filterNode( storage, map, pageNode, "html/body" );
-
+			LOG.info("filter function finished for : "+host+path);
 		}catch( Exception e ){
 			LOG.error( "Exception while filtering host: " + host, e );
 		}
 
-		LOG.debug( "number of db roundtrip while filtering: " + storage.counter + " ,url : "+ host);
+		LOG.info( "number of db roundtrip while filtering: " + storage.counter + " ,url : "+ host);
 
 		return result;
 	}
@@ -153,9 +154,6 @@ public class Harvester {
 		storage.incNodeFreq( item, val );
 		
 		if( null == val ||  val.frequency < frequency_threshould ) {
-			// TODO fix this
-			// storage.addNode( )
-			// no adding, cache threshold wouldn't apply
 			
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 				updateNodes( storage, map, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
@@ -170,10 +168,11 @@ public class Harvester {
 		String content = "";
 
 		// if( 32 == hash ) return content;
-
-		NodeValue val  = map.get( new PageNodeId( xpath, hash ) );
+		PageNodeId id = new PageNodeId( xpath, hash );
+		NodeValue val  = map.get( id );
 		
-		if( val.frequency < frequency_threshould ) {
+		LOG.info("filterNode: id:" + id + " val:" + val );
+		if( null == val || val.frequency < frequency_threshould ) {
 			content = NodeUtil.extractText( node );
 
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){

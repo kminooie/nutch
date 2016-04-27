@@ -68,26 +68,18 @@ public class Mariadb extends Storage {
 		checkConnection();
 
 		try {
-			// psGetFreq = conn.prepareStatement( 
-			// 		"SELECT count( url_id ) FROM nodes JOIN frequency ON ( node_id = id ) WHERE host_id=? AND hash=? AND xpath_id=? ;" 
-			// 		);
-
 			psNode = conn.prepareStatement( 
 					"INSERT INTO nodes ( host_id, hash, xpath_id ) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID( id );"
 					, Statement.RETURN_GENERATED_KEYS
 					);
 
-			psFrequency = conn.prepareStatement( "INSERT INTO frequency( node_id, url_id ) VALUES (?, ?);"
+			psFrequency = conn.prepareStatement( "INSERT IGNORE INTO frequency( node_id, url_id ) VALUES (?, ?);"
 					);
-
-			// psPageNodes = conn.prepareStatement( "SELECT xpath, hash, COUNT( url_id ) fq FROM ( SELECT f.node_id id , n.host_id host_id, n.xpath xpath, n.hash hash FROM nodes n, frequency f WHERE n.id = f.node_id and n.host_id = ? and f.url_id = ?) t  JOIN  frequency f2 ON ( f2.node_id = t.id ) GROUP BY f2.node_id ;"
-			// 		);
-
 		} catch( Exception e ) {
 			LOG.error( "while preparing statements: ", e );
 		}
 
-		LOG.debug("Connection class created");
+		LOG.info("Connection class created");
 	}
 
 	private void checkConnection() {
@@ -102,7 +94,7 @@ public class Mariadb extends Storage {
 		if( renew ) {
 			try {
 				conn = poolDS.getConnection();
-				LOG.debug( "got connection from pool" );
+				LOG.info( "got connection from pool" );
 				renew = true;
 			} catch( Exception e ) {
 				LOG.error( "Failed to get connection from pool:", e );
@@ -174,17 +166,23 @@ public class Mariadb extends Storage {
 	@Override
 	protected Map<PageNodeId, NodeValue> getBackendFreq() {
 	
-		String sql = "SELECT t.id id, xpath, hash, count(url_id ) fq FROM (" 
-				+ "SELECT f.node_id id , n.host_id host_id, n.xpath xpath, n.hash hash FROM nodes n, frequency f "
-				+ "WHERE n.id = f.node_id AND n.host_id ="+ hostId+" AND f.url_id = "+pathId+" AND NOT ( ";
+		String sql = "SELECT t.id id, xpath_id, hash, count(url_id ) fq FROM (" 
+				+ "SELECT f.node_id id , n.host_id host_id, n.xpath_id xpath_id, n.hash hash FROM nodes n, frequency f "
+				+ "WHERE n.id = f.node_id AND n.host_id ="+ hostId+" AND f.url_id = "+pathId; 
 		
 		String nodeList = "";
-		for( PageNodeId temp : exclusion ) {			 
-			if( 0 < nodeList.length()  ) nodeList += " OR ";
-			nodeList += "( xpath ="+ temp.xpathId + "' AND hash =" + temp.hash + ")";
-		}
+		if( exclusion.size() > 0 ) {
+			sql += " AND NOT ( ";			
 		
-		sql = sql + nodeList + ") )t  JOIN  frequency f2 ON ( f2.node_id = t.id ) GROUP BY f2.node_id ";
+			for( PageNodeId temp : exclusion ) {			 
+				if( 0 < nodeList.length()  ) nodeList += " OR ";
+				nodeList += "( n.xpath_id ="+ temp.xpathId + "' AND n.hash =" + temp.hash + ")";
+			}
+			
+			sql += " ) ";
+		}
+			
+		sql = sql + nodeList + " )t  JOIN  frequency f2 ON ( f2.node_id = t.id ) GROUP BY f2.node_id ;";
 		
 		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >();
 		
@@ -193,18 +191,21 @@ public class Mariadb extends Storage {
 		try {
 			Statement stmt = conn.createStatement();
 	        ResultSet rs = stmt.executeQuery( sql );
-
+	        
+	        int c = 0;
 	        while( rs.next() ) {
+	        	++c;
 	        	int nid = rs.getInt( "id" );
-	        	PageNodeId pid = new PageNodeId( rs.getInt( "xpath" ), rs.getInt( "hash" ) );
+	        	PageNodeId pid = new PageNodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
 	        	int fq = rs.getInt( "fq" );
 	        	
 	        	NodeValue val = new NodeValue( fq, nid);
 	        	
 	        	readFreq.put( pid, val );
 	        }
+	        LOG.info( "got " + c + " items from database.");
 		} catch( Exception e ) {
-			LOG.debug( "Got Exception:", e );
+			LOG.error( "Got Exception:", e );
 		}
 		
 		return readFreq;
@@ -213,7 +214,7 @@ public class Mariadb extends Storage {
 
 	@Override
 	public void incNodeFreq( PageNodeId id, NodeValue val ) {
-	
+		LOG.info( "incNodeFreq: id:" + id + " val:" + val );
 		if( null == val ) {
 			try {
 				
@@ -249,8 +250,6 @@ public class Mariadb extends Storage {
 		}
 
 		if( 0 == newNodes % batchSize ) pageEnd();
-		
-		
 		
 	}
 

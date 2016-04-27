@@ -1,5 +1,8 @@
 package com.doslocos.nutch.harvester;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.nutch.crawl.CrawlDatum;
@@ -19,15 +22,39 @@ public class IndexingPart implements IndexingFilter {
 	public static String newFieldName = "harvestedContent";
 	private Configuration conf;
 	private Harvester nodeParse;
-
+	private String[] fieldsRemove; 
 	@Override
 	public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
 			CrawlDatum datum, Inlinks inlinks) throws IndexingException  {
 
-		String textContent = nodeParse.filter( parse.getData().getParseMeta().get("rawcontent"), doc.getFieldValue("host").toString() );
+		LOG.info( "filter called with urt:" + url );
+//		
+//		for( String name:doc.getFieldNames() ) {
+//			LOG.info( " doc contains :" +name );
+//		}
+		URL netUrl = null;
+		try {
+			netUrl = new URL( doc.getFieldValue("url").toString() );
+			LOG.info("extract the path: "+netUrl.getPath());
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		String textContent = nodeParse.filter( 
+			parse.getData().getParseMeta().get("rawcontent"), 
+			doc.getFieldValue("host").toString(), 
+			netUrl.getPath() 
+		);
+
+		for (String val : fieldsRemove) {
+			doc.removeField( val );
+		}
+
+		doc.removeField( newFieldName );
 		doc.add( newFieldName, textContent );
 
-		LOG.debug("new parsed text replaced with old one by harvester plug in for : "+url.toString());
+		LOG.info("new parsed text replaced with old one by harvester plug in for : "+url.toString());
 
 		return doc;
 	}
@@ -40,6 +67,8 @@ public class IndexingPart implements IndexingFilter {
 		newFieldName =  conf.get( "doslocos.harvester.fieldname" , newFieldName );
 		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
 		
+		fieldsRemove = conf.getStrings("doslocos.harvester.removefileds", new String[0] );
+
 		this.conf = conf;
 	}
 

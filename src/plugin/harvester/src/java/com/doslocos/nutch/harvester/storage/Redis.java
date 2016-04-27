@@ -15,7 +15,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+//import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 
 public class Redis extends Storage {
