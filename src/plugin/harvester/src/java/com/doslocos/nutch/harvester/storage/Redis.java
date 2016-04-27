@@ -36,21 +36,21 @@ public class Redis extends Storage {
 	static public void set(Configuration conf){
 		Storage.set( conf );
 		
-		LOG.info( "Initilizing Redis storage." );
+		LOG.debug( "Initilizing Redis storage." );
 		
 		String redisHost = conf.get( "doslocos.harvester.redis.host", "localhost" );
 		int redisPort = conf.getInt( "doslocos.harvester.redis.port", 6379 );
 		int redisDb = conf.getInt( "doslocos.harvester.redis.db", 15 );
 		int redisTimeOut = conf.getInt( "doslocos.harvester.redis.dbTimeOut", 0 );
-		LOG.info( "host:" + redisHost + ":" + redisPort +" db:"+ redisDb + " timeout:" + redisTimeOut );
+		LOG.debug( "host:" + redisHost + ":" + redisPort +" db:"+ redisDb + " timeout:" + redisTimeOut );
 		
 		boolean setTestOnBorrow = conf.getBoolean( "doslocos.harvester.redis.setTestOnBorrow", true );
 		boolean setTestOnReturn = conf.getBoolean( "doslocos.harvester.redis.setTestOnReturn", true );
 		boolean setTestWhileIdle = conf.getBoolean( "doslocos.harvester.redis.setTestWhileIdle", true );
 		int setMaxTotal = conf.getInt( "doslocos.harvester.redis.setMaxTotal",128);
 		int setMaxIdle = conf.getInt( "doslocos.harvester.redis.setMaxIdle",128);
-		LOG.info( "Pool: onBorrow:" + setTestOnBorrow + "  onReturn:" + setTestOnReturn + " whileIdle:" + setTestWhileIdle );
-		LOG.info( "Pool: MaxTotal:" + setMaxTotal + " MaxIdle:" + setMaxIdle );
+		LOG.debug( "Pool: onBorrow:" + setTestOnBorrow + "  onReturn:" + setTestOnReturn + " whileIdle:" + setTestWhileIdle );
+		LOG.debug( "Pool: MaxTotal:" + setMaxTotal + " MaxIdle:" + setMaxIdle );
 
 		poolConfig = new JedisPoolConfig();
 
@@ -62,7 +62,6 @@ public class Redis extends Storage {
 
 		pool = new JedisPool( poolConfig, redisHost, redisPort, redisTimeOut );	
 
-		// initConnection();
 	}
 
 	
@@ -134,7 +133,6 @@ public class Redis extends Storage {
 
 		int times = counter;
 
-		// initConnection();
 		while( ! achived ) {
 			try{
 
@@ -143,7 +141,7 @@ public class Redis extends Storage {
 				byte nodeBytes[] = id.getBytes();
 				int freqPath = jedis.scard( nodeBytes ).intValue();
 
-				LOG.info( "adding " + id + " with fq:" + freqPath + " for path:" + path );
+				//LOG.debug( "adding " + id + " with fq:" + freqPath + " for path:" + path );
 				read.put( id, new NodeValue( freqPath ) );
 
 				achived = true;
@@ -178,7 +176,7 @@ public class Redis extends Storage {
 
 	@Override
 	public void pageEnd() {
-		LOG.info( "PageEnd was called" );
+		LOG.debug( "PageEnd was called" );
 	}
 
 

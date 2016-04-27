@@ -29,7 +29,7 @@ public class Mariadb extends Storage {
 	private PreparedStatement  psNode, psFrequency;
 	boolean psNodeDirty = false, psFrequencyDirty = false;
 	private ResultSet tempRs = null;
-	
+
 	private int newNodes = 0;
 	private int newUrls = 0;
 
@@ -40,24 +40,26 @@ public class Mariadb extends Storage {
 		String PASS = conf.get("doslocos.harvester.mariadb.password", "" );
 
 
-		LOG.info( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
+		LOG.debug( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
 
 		poolDS = new BasicDataSource();
-		//I added this lines recently to check
-		//poolDS.setInitialSize(20);
-		
-		
-		
+	 
 		poolDS.setDriverClassName( "org.mariadb.jdbc.Driver" );
 		poolDS.setUrl( "jdbc:mysql://"+DBHOST+"/"+SCHEMA+"?rewriteBatchedStatements=true" );
 		poolDS.setUsername( USER );
 		poolDS.setPassword( PASS );
 
+		int maxTotal = conf.getInt("doslocos.harvester.mariadb.setMaxTotal", 32);
+		int maxIdle = conf.getInt("doslocos.harvester.mariadb.setMaxIdle", 32);
+		
+		poolDS.setMaxTotal(maxTotal);
+		poolDS.setMaxIdle(maxIdle);
+		
 		try {
 			Connection conn = poolDS.getConnection();
 
 			if( null != conn ) {
-				LOG.info( "MariaDB connected." );
+				LOG.debug( "MariaDB connected." );
 			} else {
 				LOG.error( "Failed to connect to MariaDB." );
 				System.exit( 1 );
@@ -85,19 +87,18 @@ public class Mariadb extends Storage {
 			LOG.error( "while preparing statements: ", e );
 		}
 
-		LOG.info("Connection class created");
+		LOG.debug("Connection class created");
 	}
 
 	@Override
 	public void addToBackendList( PageNodeId id ) {
 
-		// checkConnection();
 
 		try {			
 			psNode.setInt( 1, hostId );
 			psNode.setInt( 2, id.hash );
 			psNode.setInt( 3, id.xpathId );
-			
+
 			psNode.addBatch();
 
 			++newNodes;
@@ -110,39 +111,38 @@ public class Mariadb extends Storage {
 	}
 
 
-	
+
 	@Override
 	public void pageEnd(){
-		// checkConnection();
-		
+
 		updateDB();
-		
+
 		try {
 			conn.commit();
 			conn.close();
-			LOG.info( "Page Ended. counter is:" + counter );
+			LOG.debug( "Page Ended. counter is:" + counter );
 		}catch(Exception e){
 			LOG.error( "Error while adding a id in frequency table" , e  );
 		}		
 
 		super.pageEnd();
 	}
-	
+
 
 	@Override
 	public void incNodeFreq( PageNodeId id, NodeValue val ) {
-		LOG.info( "incNodeFreq: id:" + id + " val:" + val );
+	//	LOG.debug( "incNodeFreq: id:" + id + " val:" + val );
 		if( null == val ) {
 			try {
-				
+
 				psNode.setInt( 1, hostId );
 				psNode.setInt( 2, id.hash );
 				psNode.setInt( 3, id.xpathId );
-				
+
 				psNode.addBatch();
-	
+
 				++newNodes;
-	
+
 			} catch(Exception e) {
 				LOG.error( "Error while attempting to add a node" , e );
 			}
@@ -150,24 +150,23 @@ public class Mariadb extends Storage {
 			try {
 				psFrequency.setInt( 1, val.dbId );
 				psFrequency.setInt( 2, pathId );
-				
+
 				psFrequency.addBatch();
-				
+
 				++newUrls;
-				
-				// size of psFrequency updates are much smaller
+
 				if( 0 == newUrls % batchSize ) {
 					psFrequency.executeBatch();
 					++counter;
 				}
-				
+
 			} catch( Exception e ) {
 				LOG.error( "Error while adding a id in frequency table" , e );
 			}
 		}
 
 		if( 0 == newNodes % batchSize ) updateDB();
-		
+
 	}
 
 	protected void updateDB( ) {
@@ -187,81 +186,81 @@ public class Mariadb extends Storage {
 
 			}			
 			++counter;
-			LOG.info("updated nodes.");
+			LOG.debug("updated nodes.");
 		}catch(Exception e){
 			LOG.error( "Error while updateing nodes:" , e  );
 		}
-		
+
 		try {
 			psFrequency.executeBatch();
 			++counter;
-			LOG.info("updated frequency.");
+			LOG.debug("updated frequency.");
 		} catch( Exception e ) {
 			LOG.error( "Error while updating frequency:" , e  );
 		}
 	}
-	
-	
+
+
 	@Override
- 	protected Map<PageNodeId, NodeValue> getBackendFreq() {
-	
+	protected Map<PageNodeId, NodeValue> getBackendFreq() {
+
 		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >( 1024 );
-		
+
 		if( missing.size() > 0 ) {
-		
+
 			String sqlPrefix = "SELECT f.node_id node_id, xpath_id, hash, fq"  
-				+ " FROM frequency f JOIN urls u ON( f.node_id =  u.node_id AND u.url_id = " + pathId + " ) "
-				+ "WHERE ( xpath_id, hash ) IN ("
-				
+					+ " FROM frequency f JOIN urls u ON( f.node_id =  u.node_id AND u.url_id = " + pathId + " ) "
+					+ "WHERE ( xpath_id, hash ) IN ("
+
 				, sqlPostfix = ")"
 				, nodeList = "";
-			
+
 			int i = 0;
-			
+
 			for( PageNodeId temp : missing ) {			 
 				nodeList += ",("+ temp.xpathId + "," + temp.hash + ")";
 				++i;
-				
+
 				if( 0 == i % batchSize ) {
 					readDB( sqlPrefix + nodeList.substring( 1 ) + sqlPostfix, readFreq );
 					nodeList = "";
 				}
 			}
-			
+
 			if( 0 < nodeList.length() )
 				readDB( sqlPrefix + nodeList.substring( 1 ) + sqlPostfix, readFreq );
 		}		
-		
+
 		return readFreq;
 	}
-		
-	
+
+
 	protected void readDB( String sql, Map<PageNodeId, NodeValue> map ) {
 
 		checkConnection();
-		
+
 		try {
 			Statement stmt = conn.createStatement();
-	        ResultSet rs = stmt.executeQuery( sql );
-	        
-	        int c = 0;
-	        while( rs.next() ) {
-	        	++c;
-	        	int nid = rs.getInt( "node_id" );
-	        	PageNodeId pid = new PageNodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
-	        	int fq = rs.getInt( "fq" );
-	        	
-	        	NodeValue val = new NodeValue( fq, nid);
-	        	
-	        	map.put( pid, val );
-	        }
-	        LOG.info( "got " + c + " items from database.");
+			ResultSet rs = stmt.executeQuery( sql );
+
+			//int c = 0;
+			while( rs.next() ) {
+				//++c;
+				int nid = rs.getInt( "node_id" );
+				PageNodeId pid = new PageNodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
+				int fq = rs.getInt( "fq" );
+
+				NodeValue val = new NodeValue( fq, nid);
+
+				map.put( pid, val );
+			}
+			//LOG.debug( "got " + c + " items from database.");
 		} catch( Exception e ) {
 			LOG.error( "Got Exception:", e );
 		}
 	}
 
-	
+
 	@Override
 	protected void finalize(){
 		if (conn != null) {
@@ -277,33 +276,27 @@ public class Mariadb extends Storage {
 
 	private void checkConnection() {
 		boolean renew = false;
-		
+
 		try {
 			if ( null == conn || conn.isClosed() ) renew = true;
 		} catch ( Exception e ) {
 			LOG.error( "Exception while trying to check connection:", e );
 			renew = true;
 		}
-		LOG.info( "checkConnection renew:" + renew );
 		if( renew ) {
 			try {
 				conn = poolDS.getConnection();
-				LOG.info("connection fetched");
 				conn.setAutoCommit( false );
-				LOG.info("set auto Commit run");
 
-			    conn.setTransactionIsolation( Connection.TRANSACTION_READ_COMMITTED );
+				conn.setTransactionIsolation( Connection.TRANSACTION_READ_COMMITTED );
 
-				LOG.info( "got connection from pool" );
+				LOG.debug( "got connection from pool" );
 				renew = false;
 			} catch( Exception e ) {
 				LOG.error( "Failed to get connection from pool:", e );
 			}
 		}
 
-		// if( renew ) {
-		// 	LOG.error( "Unable to renew the database connection."  );
-		// }
 
 
 	}

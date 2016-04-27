@@ -29,7 +29,7 @@ public abstract class Storage {
 	 * would contain all the nodes for this object page ( host + path )
 	 */
 	public final LinkedHashMap< PageNodeId, NodeValue> currentPage = new LinkedHashMap< PageNodeId, NodeValue>( 4000, .9f );
-	//public final Vector< PageNodeId > exclusion = new Vector< PageNodeId>( 64 );
+
 	public final Vector< PageNodeId > missing = new Vector< PageNodeId>( 2048 );
 
 	public int counter = 0;
@@ -49,9 +49,9 @@ public abstract class Storage {
 		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
 
 		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 1000 );
-		LOG.info( "batch size:" + batchSize );
-		LOG.info( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
-		LOG.info( "Initilizing cache threshold : " +cacheThreshould );
+		LOG.debug( "batch size:" + batchSize );
+		LOG.debug( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
+		LOG.debug( "Initilizing cache threshold : " +cacheThreshould );
 
 		if( cacheSize < 1000 ) cacheSize = 1000;
 		
@@ -68,7 +68,7 @@ public abstract class Storage {
 
 		if ( null == path ){
 			path = "/" ;
-			LOG.info("a path with null value change to / value");
+			LOG.debug("a path with null value change to / value");
 
 		}
 		this.path = path;
@@ -83,7 +83,7 @@ public abstract class Storage {
 
 		if( null == val ) {
 			++cacheMissed;
-			// addToBackendList( id );
+
 			missing.add( id );
 		} else {
 			++cacheHit;
@@ -94,9 +94,9 @@ public abstract class Storage {
 
 
 	public Map<PageNodeId, NodeValue> getAllFreq() {
-		LOG.info( "page cache size:" + currentPage.size() );
+		LOG.debug( "page cache size:" + currentPage.size() );
 		Map<PageNodeId, NodeValue> backendData = getBackendFreq();
-		LOG.info( "number of items read from backend:" + backendData.size() );
+		LOG.debug( "number of items read from backend:" + backendData.size() );
 		
 		for( Map.Entry< PageNodeId, NodeValue > e:backendData.entrySet() ) {
 			NodeValue val = e.getValue();
@@ -112,8 +112,8 @@ public abstract class Storage {
 			currentPage.put( e.getKey(),val );
 		}
 		
-		LOG.info( "page cache size:" + currentPage.size() );
-		LOG.info( "hit:" + cacheHit + " missed:" + cacheMissed );
+		LOG.debug( "page cache size:" + currentPage.size() );
+		LOG.debug( "hit:" + cacheHit + " missed:" + cacheMissed );
 		return currentPage;
 	}
 

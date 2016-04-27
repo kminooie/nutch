@@ -30,8 +30,9 @@ public class TrainingPart implements HtmlParseFilter{
 
 		try {
 			URL netUrl = new URL(content.getUrl());
+			
 			kbc.learn( HTMLBody, netUrl.getHost(), netUrl.getPath() );
-			LOG.info("learning part finish for : "+netUrl.getHost()+ netUrl.getPath());
+			LOG.debug("learning part finish for : "+netUrl.getHost()+ netUrl.getPath());
 		} catch (MalformedURLException e) {
 			LOG.error("Error while training part in harvester plugin", e );
 		}
