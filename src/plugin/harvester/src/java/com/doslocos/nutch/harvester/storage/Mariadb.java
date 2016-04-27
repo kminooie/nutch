@@ -43,6 +43,11 @@ public class Mariadb extends Storage {
 		LOG.info( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
 
 		poolDS = new BasicDataSource();
+		//I added this lines recently to check
+		//poolDS.setInitialSize(20);
+		
+		
+		
 		poolDS.setDriverClassName( "org.mariadb.jdbc.Driver" );
 		poolDS.setUrl( "jdbc:mysql://"+DBHOST+"/"+SCHEMA+"?rewriteBatchedStatements=true" );
 		poolDS.setUsername( USER );
@@ -114,7 +119,7 @@ public class Mariadb extends Storage {
 		
 		try {
 			conn.commit();
-			
+			conn.close();
 			LOG.info( "Page Ended. counter is:" + counter );
 		}catch(Exception e){
 			LOG.error( "Error while adding a id in frequency table" , e  );
@@ -279,11 +284,14 @@ public class Mariadb extends Storage {
 			LOG.error( "Exception while trying to check connection:", e );
 			renew = true;
 		}
-
+		LOG.info( "checkConnection renew:" + renew );
 		if( renew ) {
 			try {
 				conn = poolDS.getConnection();
+				LOG.info("connection fetched");
 				conn.setAutoCommit( false );
+				LOG.info("set auto Commit run");
+
 			    conn.setTransactionIsolation( Connection.TRANSACTION_READ_COMMITTED );
 
 				LOG.info( "got connection from pool" );

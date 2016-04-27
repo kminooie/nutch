@@ -105,6 +105,8 @@ public class Harvester {
 			map = storage.getAllFreq();
 
 			result = filterNode( storage, map, pageNode, "html/body" );
+			storage.pageEnd();
+			
 			LOG.info("filter function finished for : "+host+path);
 		}catch( Exception e ){
 			LOG.error( "Exception while filtering host: " + host, e );
