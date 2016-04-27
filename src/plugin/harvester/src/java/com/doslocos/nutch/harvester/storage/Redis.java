@@ -185,6 +185,10 @@ public class Redis extends Storage {
 
 	@Override
 	protected Map<PageNodeId, NodeValue> getBackendFreq() {
+		for( PageNodeId temp : missing ) {
+			addToBackendList( temp );
+		}
+		
 		return read;
 	}
 

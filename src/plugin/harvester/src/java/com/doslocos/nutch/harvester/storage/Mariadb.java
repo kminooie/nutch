@@ -166,26 +166,40 @@ public class Mariadb extends Storage {
 	@Override
 	protected Map<PageNodeId, NodeValue> getBackendFreq() {
 	
-		String sql = "SELECT t.id id, xpath_id, hash, count(url_id ) fq FROM (" 
-				+ "SELECT f.node_id id , n.host_id host_id, n.xpath_id xpath_id, n.hash hash FROM nodes n, frequency f "
-				+ "WHERE n.id = f.node_id AND n.host_id ="+ hostId+" AND f.url_id = "+pathId; 
+		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >( 1024 );
 		
-		String nodeList = "";
-		if( exclusion.size() > 0 ) {
-			sql += " AND NOT ( ";			
+		if( missing.size() > 0 ) {
 		
-			for( PageNodeId temp : exclusion ) {			 
-				if( 0 < nodeList.length()  ) nodeList += " OR ";
-				nodeList += "( n.xpath_id ="+ temp.xpathId + "' AND n.hash =" + temp.hash + ")";
+			String sqlPrefix = "SELECT f.node_id node_id, xpath_id, hash, fq"  
+				+ " FROM frequency f JOIN urls u ON( f.node_id =  u.node_id AND u.url_id = " + pathId + " ) "
+				+ "WHERE ( xpath_id, hash ) IN ("
+				
+				, sqlPostfix = ")"
+				, nodeList = "";
+			
+			int counter = 0;
+			
+			for( PageNodeId temp : missing ) {			 
+				nodeList += "("+ temp.xpathId + "," + temp.hash + ")";
+				++counter;
+				
+				if( 0 == counter % batchSize ) {
+					readDB( sqlPrefix + nodeList + sqlPostfix, readFreq );
+					nodeList = "";
+				}
 			}
 			
-			sql += " ) ";
-		}
-			
-		sql = sql + nodeList + " )t  JOIN  frequency f2 ON ( f2.node_id = t.id ) GROUP BY f2.node_id ;";
+			if( 0 < nodeList.length() )
+				readDB( sqlPrefix + nodeList + sqlPostfix, readFreq );
+		}		
 		
-		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >();
-		
+		return readFreq;
+	}
+	
+	
+	
+	protected void readDB( String sql, Map<PageNodeId, NodeValue> map ) {
+
 		checkConnection();
 		
 		try {
@@ -195,20 +209,18 @@ public class Mariadb extends Storage {
 	        int c = 0;
 	        while( rs.next() ) {
 	        	++c;
-	        	int nid = rs.getInt( "id" );
+	        	int nid = rs.getInt( "node_id" );
 	        	PageNodeId pid = new PageNodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
 	        	int fq = rs.getInt( "fq" );
 	        	
 	        	NodeValue val = new NodeValue( fq, nid);
 	        	
-	        	readFreq.put( pid, val );
+	        	map.put( pid, val );
 	        }
 	        LOG.info( "got " + c + " items from database.");
 		} catch( Exception e ) {
 			LOG.error( "Got Exception:", e );
 		}
-		
-		return readFreq;
 	}
 
 

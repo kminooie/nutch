@@ -29,7 +29,8 @@ public abstract class Storage {
 	 * would contain all the nodes for this object page ( host + path )
 	 */
 	public final LinkedHashMap< PageNodeId, NodeValue> currentPage = new LinkedHashMap< PageNodeId, NodeValue>( 4000, .9f );
-	public final Vector< PageNodeId > exclusion = new Vector< PageNodeId>( 64 );
+	//public final Vector< PageNodeId > exclusion = new Vector< PageNodeId>( 64 );
+	public final Vector< PageNodeId > missing = new Vector< PageNodeId>( 2048 );
 
 	public int counter = 0;
 
@@ -83,10 +84,10 @@ public abstract class Storage {
 		if( null == val ) {
 			++cacheMissed;
 			// addToBackendList( id );
+			missing.add( id );
 		} else {
 			++cacheHit;
 			currentPage.put( id, val );
-			exclusion.add( id );
 		}
 
 	}
