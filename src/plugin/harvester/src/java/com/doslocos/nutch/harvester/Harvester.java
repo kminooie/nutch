@@ -80,13 +80,12 @@ public class Harvester {
 			updateNodes( storage, map, pageNode, "html/body" );
 			
 			storage.pageEnd();
+			
 			LOG.info("learning function finish for : "+ host+path);
 			result=true;
 		}catch( Exception e ){
 			LOG.error( "Exception while parsing host: " + host + " path: " + path, e );
 		}
-
-		LOG.info( "number of db roundtrip while learning:" + storage.counter +"  "+host+path);
 
 		return result;
 	}

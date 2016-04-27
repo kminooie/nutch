@@ -177,9 +177,8 @@ public class Redis extends Storage {
 	
 
 	@Override
-	public boolean pageEnd() {
+	public void pageEnd() {
 		LOG.info( "PageEnd was called" );
-		return true;
 	}
 
 

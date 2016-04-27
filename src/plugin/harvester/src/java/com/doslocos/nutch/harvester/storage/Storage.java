@@ -118,8 +118,12 @@ public abstract class Storage {
 	}
 
 	
+
+	public void pageEnd() {
+		
+	}
+	
 	public abstract void incNodeFreq( PageNodeId id, NodeValue val );
-	public abstract boolean pageEnd();
 
 	protected abstract void addToBackendList( PageNodeId id );
 	protected abstract Map< PageNodeId, NodeValue > getBackendFreq();
