@@ -53,6 +53,8 @@
      <ant dir="protocol-ftp" target="deploy"/>
      <ant dir="protocol-http" target="deploy"/>
      <ant dir="protocol-httpclient" target="deploy"/>
+     <ant dir="lib-htmlunit" target="deploy"/>
+     <ant dir="protocol-htmlunit" target="deploy" />
      <ant dir="lib-selenium" target="deploy"/>
      <ant dir="protocol-selenium" target="deploy" />
      <ant dir="protocol-interactiveselenium" target="deploy" />
@@ -77,12 +79,15 @@
      <ant dir="urlfilter-regex" target="deploy"/>
      <ant dir="urlfilter-suffix" target="deploy"/>
      <ant dir="urlfilter-validator" target="deploy"/>
+     <ant dir="urlfilter-ignoreexempt" target="deploy"/>
      <ant dir="parsefilter-naivebayes" target="deploy"/>
+     <ant dir="parsefilter-regex" target="deploy"/>
      <ant dir="urlmeta" target="deploy"/>
      <ant dir="urlnormalizer-ajax" target="deploy"/>
      <ant dir="urlnormalizer-basic" target="deploy"/>
      <ant dir="urlnormalizer-host" target="deploy"/>
      <ant dir="urlnormalizer-pass" target="deploy"/>
+     <ant dir="urlnormalizer-protocol" target="deploy"/>
      <ant dir="urlnormalizer-querystring" target="deploy"/>
      <ant dir="urlnormalizer-regex" target="deploy"/>
      <ant dir="urlnormalizer-slash" target="deploy"/>
@@ -114,6 +119,7 @@
      <ant dir="parse-swf" target="test"/>
      <ant dir="parse-tika" target="test"/>
      <ant dir="parse-zip" target="test"/>
+     <ant dir="parsefilter-regex" target="test"/>
      <ant dir="subcollection" target="test"/>
      <ant dir="urlfilter-automaton" target="test"/>
      <ant dir="urlfilter-domain" target="test"/>
@@ -122,10 +128,12 @@
      <ant dir="urlfilter-regex" target="test"/>
      <ant dir="urlfilter-suffix" target="test"/>
      <ant dir="urlfilter-validator" target="test"/>
+     <ant dir="urlfilter-ignoreexempt" target="test"/>
      <ant dir="urlnormalizer-ajax" target="test"/>
      <ant dir="urlnormalizer-basic" target="test"/>
      <ant dir="urlnormalizer-host" target="test"/>
      <ant dir="urlnormalizer-pass" target="test"/>
+     <ant dir="urlnormalizer-protocol" target="test"/>
      <ant dir="urlnormalizer-querystring" target="test"/>
      <ant dir="urlnormalizer-regex" target="test"/>
      <ant dir="urlnormalizer-slash" target="test"/>
@@ -165,6 +173,8 @@
     <ant dir="protocol-ftp" target="clean"/>
     <ant dir="protocol-http" target="clean"/>
     <ant dir="protocol-httpclient" target="clean"/>
+    <ant dir="lib-htmlunit" target="clean"/>
+    <ant dir="protocol-htmlunit" target="clean" />
     <ant dir="lib-selenium" target="clean"/>
     <ant dir="protocol-selenium" target="clean" />
     <ant dir="protocol-interactiveselenium" target="clean" />
@@ -176,6 +186,7 @@
     <ant dir="parse-swf" target="clean"/>
     <ant dir="parse-tika" target="clean"/>
     <ant dir="parse-zip" target="clean"/>
+    <ant dir="parsefilter-regex" target="clean"/>
     <ant dir="scoring-depth" target="clean"/>
     <ant dir="scoring-opic" target="clean"/>
     <ant dir="scoring-link" target="clean"/>
@@ -189,12 +200,14 @@
     <ant dir="urlfilter-regex" target="clean"/>
     <ant dir="urlfilter-suffix" target="clean"/>
     <ant dir="urlfilter-validator" target="clean"/>
+    <ant dir="urlfilter-ignoreexempt" target="clean"/>
     <ant dir="parsefilter-naivebayes" target="clean" />
     <ant dir="urlmeta" target="clean"/>
     <ant dir="urlnormalizer-ajax" target="clean"/>
     <ant dir="urlnormalizer-basic" target="clean"/>
     <ant dir="urlnormalizer-host" target="clean"/>
     <ant dir="urlnormalizer-pass" target="clean"/>
+    <ant dir="urlnormalizer-protocol" target="clean"/>
     <ant dir="urlnormalizer-querystring" target="clean"/>
     <ant dir="urlnormalizer-regex" target="clean"/>
     <ant dir="urlnormalizer-slash" target="clean"/>

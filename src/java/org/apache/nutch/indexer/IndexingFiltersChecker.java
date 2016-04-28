@@ -17,6 +17,13 @@
 
 package org.apache.nutch.indexer;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -32,6 +39,7 @@ import org.apache.nutch.crawl.Inlinks;
 import org.apache.nutch.crawl.SignatureFactory;
 import org.apache.nutch.metadata.Metadata;
 import org.apache.nutch.metadata.Nutch;
+import org.apache.nutch.net.URLNormalizers;
 import org.apache.nutch.parse.Parse;
 import org.apache.nutch.parse.ParseResult;
 import org.apache.nutch.parse.ParseSegment;
@@ -43,7 +51,6 @@ import org.apache.nutch.protocol.ProtocolOutput;
 import org.apache.nutch.scoring.ScoringFilters;
 import org.apache.nutch.util.NutchConfiguration;
 import org.apache.nutch.util.StringUtil;
-import org.apache.nutch.util.URLUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +66,13 @@ import org.slf4j.LoggerFactory;
 
 public class IndexingFiltersChecker extends Configured implements Tool {
 
+  protected URLNormalizers normalizers = null;
+  protected boolean dumpText = false;
+  protected boolean followRedirects = false;
+  // used to simulate the metadata propagated from injection
+  protected HashMap<String, String> metadata = new HashMap<String, String>();
+  protected int tcpPort = -1;
+
   public static final Logger LOG = LoggerFactory
       .getLogger(IndexingFiltersChecker.class);
 
@@ -67,22 +81,22 @@ public class IndexingFiltersChecker extends Configured implements Tool {
   }
 
   public int run(String[] args) throws Exception {
-    String contentType = null;
     String url = null;
-    boolean dumpText = false;
-
-    String usage = "Usage: IndexingFiltersChecker [-dumpText] [-md key=value] <url>";
+    String usage = "Usage: IndexingFiltersChecker [-normalize] [-followRedirects] [-dumpText] [-md key=value] [-listen <port>] <url>";
 
     if (args.length == 0) {
       System.err.println(usage);
       return -1;
     }
 
-    // used to simulate the metadata propagated from injection
-    HashMap<String, String> metadata = new HashMap<String, String>();
-
     for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-dumpText")) {
+      if (args[i].equals("-normalize")) {
+        normalizers = new URLNormalizers(getConf(), URLNormalizers.SCOPE_DEFAULT);
+      } else if (args[i].equals("-listen")) {
+        tcpPort = Integer.parseInt(args[++i]);
+      } else if (args[i].equals("-followRedirects")) {
+        followRedirects = true;
+      } else if (args[i].equals("-dumpText")) {
         dumpText = true;
       } else if (args[i].equals("-md")) {
         String k = null, v = null;
@@ -98,8 +112,94 @@ public class IndexingFiltersChecker extends Configured implements Tool {
         System.err.println(usage);
         System.exit(-1);
       } else {
-        url = URLUtil.toASCII(args[i]);
+        url =args[i];
       }
+    }
+    
+    // In listening mode?
+    if (tcpPort == -1) {
+      // No, just fetch and display
+      StringBuilder output = new StringBuilder();
+      int ret = fetch(url, output);
+      System.out.println(output);
+      return ret;
+    } else {
+      // Listen on socket and start workers on incoming requests
+      listen();
+    }
+    
+    return 0;
+  }
+  
+  protected void listen() throws Exception {
+    ServerSocket server = null;
+
+    try{
+      server = new ServerSocket();
+      server.bind(new InetSocketAddress(tcpPort));
+      LOG.info(server.toString());
+    } catch (Exception e) {
+      LOG.error("Could not listen on port " + tcpPort);
+      System.exit(-1);
+    }
+    
+    while(true){
+      Worker worker;
+      try{
+        worker = new Worker(server.accept());
+        Thread thread = new Thread(worker);
+        thread.start();
+      } catch (Exception e) {
+        LOG.error("Accept failed: " + tcpPort);
+        System.exit(-1);
+      }
+    }
+  }
+  
+  private class Worker implements Runnable {
+    private Socket client;
+
+    Worker(Socket client) {
+      this.client = client;
+      LOG.info(client.toString());
+    }
+
+    public void run(){
+      String line;
+      BufferedReader in = null;
+      PrintWriter out = null;
+      
+      try{
+        in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+      } catch (Exception e) {
+        LOG.error("in or out failed");
+        System.exit(-1);
+      }
+
+      try{
+        line = in.readLine();        
+        StringBuilder output = new StringBuilder();
+        fetch(line, output);
+        
+        client.getOutputStream().write(output.toString().getBytes(Charset.forName("UTF-8")));
+      }catch (Exception e) {
+        LOG.error("Read/Write failed: " + e);
+      }
+      
+      try {
+        client.close();
+      } catch (Exception e){
+        LOG.error(e.toString());
+      }
+      
+      return;
+    }
+  }
+    
+  
+  protected int fetch(String url, StringBuilder output) throws Exception {
+    if (normalizers != null) {
+      url = normalizers.normalize(url, URLNormalizers.SCOPE_DEFAULT);
     }
 
     LOG.info("fetching: " + url);
@@ -116,26 +216,42 @@ public class IndexingFiltersChecker extends Configured implements Tool {
     }
 
     IndexingFilters indexers = new IndexingFilters(getConf());
+    
+    int maxRedirects = 3;
 
-    ProtocolFactory factory = new ProtocolFactory(getConf());
-    Protocol protocol = factory.getProtocol(url);
+    ProtocolOutput protocolOutput = getProtocolOutput(url, datum);
     Text turl = new Text(url);
-    ProtocolOutput output = protocol.getProtocolOutput(turl, datum);
+    
+    // Following redirects and not reached maxRedirects?
+    while (!protocolOutput.getStatus().isSuccess() && followRedirects && protocolOutput.getStatus().isRedirect() && maxRedirects != 0) {
+      String[] stuff = protocolOutput.getStatus().getArgs();
+      url = stuff[0];
+      
+      if (normalizers != null) {
+        url = normalizers.normalize(url, URLNormalizers.SCOPE_DEFAULT);
+      }
+    
+      turl.set(url);
+      
+      // try again
+      protocolOutput = getProtocolOutput(url, datum);
+      maxRedirects--;
+    }
 
-    if (!output.getStatus().isSuccess()) {
-      System.out.println("Fetch failed with protocol status: "
-          + output.getStatus());
+    if (!protocolOutput.getStatus().isSuccess()) {
+      output.append("Fetch failed with protocol status: "
+          + protocolOutput.getStatus() + "\n");
       return 0;
     }
 
-    Content content = output.getContent();
+    Content content = protocolOutput.getContent();
 
     if (content == null) {
-      System.out.println("No content for " + url);
+      output.append("No content for " + url + "\n");
       return 0;
     }
 
-    contentType = content.getContentType();
+    String contentType = content.getContentType();
 
     if (contentType == null) {
       return -1;
@@ -185,6 +301,7 @@ public class IndexingFiltersChecker extends Configured implements Tool {
         .set(Nutch.SIGNATURE_KEY, StringUtil.toHexString(signature));
     String digest = parse.getData().getContentMeta().get(Nutch.SIGNATURE_KEY);
     doc.add("digest", digest);
+    datum.setSignature(signature);
 
     // call the scoring filters
     try {
@@ -200,7 +317,7 @@ public class IndexingFiltersChecker extends Configured implements Tool {
     }
 
     if (doc == null) {
-      System.out.println("Document discarded by indexing filter");
+      output.append("Document discarded by indexing filter\n");
       return 0;
     }
 
@@ -210,7 +327,7 @@ public class IndexingFiltersChecker extends Configured implements Tool {
         for (Object value : values) {
           String str = value.toString();
           int minText = dumpText ? str.length() : Math.min(100, str.length());
-          System.out.println(fname + " :\t" + str.substring(0, minText));
+          output.append(fname + " :\t" + str.substring(0, minText) + "\n");
         }
       }
     }
@@ -223,6 +340,14 @@ public class IndexingFiltersChecker extends Configured implements Tool {
     }
 
     return 0;
+  }
+  
+  protected ProtocolOutput getProtocolOutput(String url, CrawlDatum datum) throws Exception {
+    ProtocolFactory factory = new ProtocolFactory(getConf());
+    Protocol protocol = factory.getProtocol(url);
+    Text turl = new Text(url);
+    ProtocolOutput protocolOutput = protocol.getProtocolOutput(turl, datum);
+    return protocolOutput;
   }
 
   public static void main(String[] args) throws Exception {

@@ -190,6 +190,7 @@
       <packageset dir="${plugins.dir}/indexer-elastic/src/java/" />
       <packageset dir="${plugins.dir}/indexer-solr/src/java"/>
       <packageset dir="${plugins.dir}/language-identifier/src/java"/>
+      <packageset dir="${plugins.dir}/lib-htmlunit/src/java"/>
       <packageset dir="${plugins.dir}/lib-http/src/java"/>
       <packageset dir="${plugins.dir}/lib-selenium/src/java"/>
       <packageset dir="${plugins.dir}/lib-regex-filter/src/java"/>
@@ -201,8 +202,10 @@
       <packageset dir="${plugins.dir}/parse-swf/src/java"/>
       <packageset dir="${plugins.dir}/parse-tika/src/java"/>
       <packageset dir="${plugins.dir}/parse-zip/src/java"/>
+      <packageset dir="${plugins.dir}/parsefilter-regex/src/java"/>
       <packageset dir="${plugins.dir}/protocol-file/src/java"/>
       <packageset dir="${plugins.dir}/protocol-ftp/src/java"/>
+      <packageset dir="${plugins.dir}/protocol-htmlunit/src/java"/>
       <packageset dir="${plugins.dir}/protocol-http/src/java"/>
       <packageset dir="${plugins.dir}/protocol-httpclient/src/java"/>
       <packageset dir="${plugins.dir}/protocol-interactiveselenium/src/java"/>
@@ -220,11 +223,13 @@
       <packageset dir="${plugins.dir}/urlfilter-regex/src/java"/>
       <packageset dir="${plugins.dir}/urlfilter-suffix/src/java"/>
       <packageset dir="${plugins.dir}/urlfilter-validator/src/java"/>
+      <packageset dir="${plugins.dir}/urlfilter-ignoreexempt/src/java"/>
       <packageset dir="${plugins.dir}/parsefilter-naivebayes/src/java"/>
       <packageset dir="${plugins.dir}/urlmeta/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-basic/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-host/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-pass/src/java"/>
+      <packageset dir="${plugins.dir}/urlnormalizer-protocol/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-querystring/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-regex/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-slash/src/java"/>
@@ -628,6 +633,7 @@
       <packageset dir="${plugins.dir}/indexer-elastic/src/java/" />
       <packageset dir="${plugins.dir}/indexer-solr/src/java"/>
       <packageset dir="${plugins.dir}/language-identifier/src/java"/>
+      <packageset dir="${plugins.dir}/lib-htmlunit/src/java"/>
       <packageset dir="${plugins.dir}/lib-http/src/java"/>
       <packageset dir="${plugins.dir}/lib-selenium/src/java"/>
       <packageset dir="${plugins.dir}/lib-regex-filter/src/java"/>
@@ -638,9 +644,11 @@
       <packageset dir="${plugins.dir}/parse-metatags/src/java"/>
       <packageset dir="${plugins.dir}/parse-swf/src/java"/>
       <packageset dir="${plugins.dir}/parse-tika/src/java"/>
+      <packageset dir="${plugins.dir}/parsefilter-regex/src/java"/>
       <packageset dir="${plugins.dir}/parse-zip/src/java"/>
       <packageset dir="${plugins.dir}/protocol-file/src/java"/>
       <packageset dir="${plugins.dir}/protocol-ftp/src/java"/>
+      <packageset dir="${plugins.dir}/protocol-htmlunit/src/java"/>
       <packageset dir="${plugins.dir}/protocol-http/src/java"/>
       <packageset dir="${plugins.dir}/protocol-httpclient/src/java"/>
       <packageset dir="${plugins.dir}/protocol-selenium/src/java"/>
@@ -657,11 +665,13 @@
       <packageset dir="${plugins.dir}/urlfilter-regex/src/java"/>
       <packageset dir="${plugins.dir}/urlfilter-suffix/src/java"/>
       <packageset dir="${plugins.dir}/urlfilter-validator/src/java"/>
+      <packageset dir="${plugins.dir}/urlfilter-ignoreexempt/src/java"/>
       <packageset dir="${plugins.dir}/parsefilter-naivebayes/src/java"/>
       <packageset dir="${plugins.dir}/urlmeta/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-basic/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-host/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-pass/src/java"/>
+      <packageset dir="${plugins.dir}/urlnormalizer-protocol/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-querystring/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-regex/src/java"/>
       <packageset dir="${plugins.dir}/urlnormalizer-slash/src/java"/>
@@ -1030,6 +1040,7 @@
         <source path="${plugins.dir}/index-static/src/test/" />
         <source path="${plugins.dir}/language-identifier/src/java/" />
         <source path="${plugins.dir}/language-identifier/src/test/" />
+        <source path="${plugins.dir}/lib-htmlunit/src/java/" />
         <source path="${plugins.dir}/lib-http/src/java/" />
         <source path="${plugins.dir}/lib-http/src/test/" />
         <source path="${plugins.dir}/lib-selenium/src/java/" />
@@ -1049,9 +1060,12 @@
         <source path="${plugins.dir}/parse-tika/src/test/" />
         <source path="${plugins.dir}/parse-zip/src/java/" />
         <source path="${plugins.dir}/parse-zip/src/test/" />
+        <source path="${plugins.dir}/parsefilter-regex/src/java/" />
+        <source path="${plugins.dir}/parsefilter-regex/src/test/" />    
         <source path="${plugins.dir}/protocol-file/src/java/" />
         <source path="${plugins.dir}/protocol-file/src/test/" />
         <source path="${plugins.dir}/protocol-ftp/src/java/" />
+        <source path="${plugins.dir}/protocol-htmlunit/src/java"/>
         <source path="${plugins.dir}/protocol-httpclient/src/java/" />
         <source path="${plugins.dir}/protocol-httpclient/src/test/" />
         <source path="${plugins.dir}/protocol-http/src/java/" />
@@ -1077,6 +1091,8 @@
         <source path="${plugins.dir}/urlfilter-suffix/src/test/" />
         <source path="${plugins.dir}/urlfilter-validator/src/java/" />
         <source path="${plugins.dir}/urlfilter-validator/src/test/" />
+        <source path="${plugins.dir}/urlfilter-ignoreexempt/src/java/" />
+        <source path="${plugins.dir}/urlfilter-ignoreexempt/src/test/" />
         <source path="${plugins.dir}/parsefilter-naivebayes/src/java/" />
         <source path="${plugins.dir}/urlmeta/src/java/" />
         <source path="${plugins.dir}/urlnormalizer-basic/src/java/" />
@@ -1085,6 +1101,8 @@
         <source path="${plugins.dir}/urlnormalizer-host/src/test/" />
         <source path="${plugins.dir}/urlnormalizer-pass/src/java/" />
         <source path="${plugins.dir}/urlnormalizer-pass/src/test/" />
+        <source path="${plugins.dir}/urlnormalizer-protocol/src/java/" />
+        <source path="${plugins.dir}/urlnormalizer-protocol/src/test/" />
         <source path="${plugins.dir}/urlnormalizer-querystring/src/java/" />
         <source path="${plugins.dir}/urlnormalizer-querystring/src/test/" />
         <source path="${plugins.dir}/urlnormalizer-regex/src/java/" />

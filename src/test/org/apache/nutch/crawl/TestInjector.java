@@ -66,7 +66,8 @@ public class TestInjector {
   }
 
   @Test
-  public void testInject() throws IOException {
+  public void testInject()
+      throws IOException, ClassNotFoundException, InterruptedException {
     ArrayList<String> urls = new ArrayList<String>();
     // We'll use a separate list for MD so we can still compare url with
     // containsAll
@@ -140,7 +141,7 @@ public class TestInjector {
 
   private List<String> readCrawldb() throws IOException {
     Path dbfile = new Path(crawldbPath, CrawlDb.CURRENT_NAME
-        + "/part-00000/data");
+        + "/part-r-00000/data");
     System.out.println("reading:" + dbfile);
     Option rFile = SequenceFile.Reader.file(dbfile);
     @SuppressWarnings("resource")
@@ -160,7 +161,7 @@ public class TestInjector {
 
   private HashMap<String, CrawlDatum> readCrawldbRecords() throws IOException {
     Path dbfile = new Path(crawldbPath, CrawlDb.CURRENT_NAME
-        + "/part-00000/data");
+        + "/part-r-00000/data");
     System.out.println("reading:" + dbfile);
     Option rFile = SequenceFile.Reader.file(dbfile);
     @SuppressWarnings("resource")
