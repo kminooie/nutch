@@ -194,7 +194,7 @@ public class Mariadb extends Storage {
 
 			}			
 			++counter;
-			LOG.debug("updated nodes.");
+			//LOG.debug("updated nodes.");
 		}catch(Exception e){
 			LOG.error( "Error while updateing nodes:" , e  );
 		}
@@ -202,7 +202,7 @@ public class Mariadb extends Storage {
 		try {
 			psFrequency.executeBatch();
 			++counter;
-			LOG.debug("updated frequency.");
+			//LOG.debug("updated frequency.");
 		} catch( Exception e ) {
 			LOG.error( "Error while updating frequency:" , e  );
 		}
@@ -274,6 +274,7 @@ public class Mariadb extends Storage {
 
 	@Override
 	protected void finalize(){
+		
 		if (conn != null) {
 			try {
 				conn.close();
