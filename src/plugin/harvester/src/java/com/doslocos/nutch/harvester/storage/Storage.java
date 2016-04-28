@@ -49,9 +49,10 @@ public abstract class Storage {
 		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
 
 		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 1000 );
-		LOG.debug( "batch size:" + batchSize );
-		LOG.debug( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
-		LOG.debug( "Initilizing cache threshold : " +cacheThreshould );
+		
+		LOG.info( "batch size:" + batchSize );
+		LOG.info( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
+		LOG.info( "Initilizing cache threshold : " +cacheThreshould );
 
 		if( cacheSize < 1000 ) cacheSize = 1000;
 		
@@ -112,8 +113,8 @@ public abstract class Storage {
 			currentPage.put( e.getKey(),val );
 		}
 		
-		LOG.debug( "page cache size:" + currentPage.size() );
-		LOG.debug( "hit:" + cacheHit + " missed:" + cacheMissed );
+		LOG.info( "page cache size:" + currentPage.size() );
+		LOG.info( "hit:" + cacheHit + " missed:" + cacheMissed );
 		return currentPage;
 	}
 

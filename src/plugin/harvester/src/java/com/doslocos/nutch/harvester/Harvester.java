@@ -29,10 +29,10 @@ public class Harvester {
 	public Harvester( Configuration conf ){
 
 		frequency_threshould =  conf.getInt( "doslocos.harvester.frequency_threshould" , 2  );
-		LOG.debug( "frequency threshould: " + frequency_threshould );
+		LOG.info( "frequency threshould: " + frequency_threshould );
 
 		NodeUtil.selectList = conf.get( "doslocos.harvester.selector", NodeUtil.selectList );
-		LOG.debug( "selectList: " + NodeUtil.selectList );
+		LOG.info( "selectList: " + NodeUtil.selectList );
 
 		connClassName = conf.get( "doslocos.harvester.storage.class", null );
 		if( null == connClassName ) {
@@ -43,7 +43,7 @@ public class Harvester {
 
 			die();
 		}
-		LOG.debug( "storage class: " + connClassName );
+		LOG.info( "storage class: " + connClassName );
 
 		try {
 			connClass = Class.forName( connClassName );

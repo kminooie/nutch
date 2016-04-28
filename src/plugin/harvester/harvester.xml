@@ -104,6 +104,34 @@
  </description>
 </property>
 
+<property>
+ <name>doslocos.harvester.mariadb.poolMaxTotal</name>
+ <value>8</value>
+ <description> maximum number of concurrent connections
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.mariadb.poolMaxIdle</name>
+ <value>2</value>
+ <description>maximum number of connection to keep around in case
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.mariadb.readBatchSize</name>
+ <value>500</value>
+ <description>number of nodes to be read in each batch
+ </description>
+</property>
+
+<property>
+ <name>doslocos.harvester.mariadb.writeBatchSize</name>
+ <value>2000</value>
+ <description>number of nodes to be inserted in each batch
+ </description>
+</property>
+
 <!-- configuration for Redis Database -->
 
 <property>

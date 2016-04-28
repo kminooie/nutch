@@ -64,7 +64,7 @@ public class IndexingPart implements IndexingFilter {
 		nodeParse = new Harvester( conf );
 
 		newFieldName =  conf.get( "doslocos.harvester.fieldname" , newFieldName );
-		LOG.debug( "doslocos.harvester.fieldname: " + newFieldName );
+		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
 		
 		fieldsRemove = conf.getStrings("doslocos.harvester.removefileds", new String[0] );
 

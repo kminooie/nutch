@@ -21,9 +21,12 @@ import com.doslocos.nutch.harvester.NodeValue;
 
 public class Mariadb extends Storage {
 
-	static private BasicDataSource poolDS;
-
 	static public final Logger LOG = LoggerFactory.getLogger( Mariadb.class );
+	
+	static private BasicDataSource poolDS;
+	
+	static private int readBSize;
+	static private int writeBSize;
 
 	private Connection conn = null;
 	private PreparedStatement  psNode, psFrequency;
@@ -34,26 +37,32 @@ public class Mariadb extends Storage {
 	private int newUrls = 0;
 
 	static public void set( Configuration conf ) {
+		Storage.set( conf );
+		
 		String DBHOST = conf.get("doslocos.harvester.mariadb.host", "localhost" );
 		String SCHEMA = conf.get("doslocos.harvester.mariadb.schema", "nutch_harvester_db" );
 		String USER = conf.get("doslocos.harvester.mariadb.username", "root" );
 		String PASS = conf.get("doslocos.harvester.mariadb.password", "" );
+		
+		int maxTotal = conf.getInt("doslocos.harvester.mariadb.poolMaxTotal", 8 );
+		int maxIdle = conf.getInt("doslocos.harvester.mariadb.poolMaxIdle", 2 );
+		
+		readBSize = conf.getInt("doslocos.harvester.mariadb.readBatchSize", 500 );
+		writeBSize = conf.getInt("doslocos.harvester.mariadb.writeBatchSize", 2000 );
 
-
-		LOG.debug( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
-
+		
+		LOG.info( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
+		LOG.info( "poolMaxTotal: " + maxTotal + " poolMaxIdle: " + maxIdle );
+		LOG.info( "readBatchSize: " + readBSize + " writeBatchSize: " + writeBSize );
+		
 		poolDS = new BasicDataSource();
 	 
 		poolDS.setDriverClassName( "org.mariadb.jdbc.Driver" );
 		poolDS.setUrl( "jdbc:mysql://"+DBHOST+"/"+SCHEMA+"?rewriteBatchedStatements=true" );
 		poolDS.setUsername( USER );
 		poolDS.setPassword( PASS );
-
-		int maxTotal = conf.getInt("doslocos.harvester.mariadb.setMaxTotal", 32);
-		int maxIdle = conf.getInt("doslocos.harvester.mariadb.setMaxIdle", 32);
-		
-		poolDS.setMaxTotal(maxTotal);
-		poolDS.setMaxIdle(maxIdle);
+		poolDS.setMaxTotal( maxTotal );
+		poolDS.setMaxIdle( maxIdle );
 		
 		try {
 			Connection conn = poolDS.getConnection();
@@ -64,11 +73,10 @@ public class Mariadb extends Storage {
 				LOG.error( "Failed to connect to MariaDB." );
 				System.exit( 1 );
 			}
+			conn.close();
 		} catch( Exception e ) {
 			LOG.error( "Exception initilizing the connection pool: ", e );
-		}
-
-		Storage.set( conf );
+		}		
 	}
 
 	public Mariadb( String host, String path ) {
@@ -107,7 +115,7 @@ public class Mariadb extends Storage {
 			LOG.error( "Error while adding a id in frequency table" , e  );
 		}
 
-		if( 0 == newNodes % batchSize ) updateDB();
+		if( 0 == newNodes % writeBSize ) updateDB();
 	}
 
 
@@ -120,7 +128,7 @@ public class Mariadb extends Storage {
 		try {
 			conn.commit();
 			conn.close();
-			LOG.debug( "Page Ended. counter is:" + counter );
+			LOG.info( "Page Ended. counter is:" + counter );
 		}catch(Exception e){
 			LOG.error( "Error while adding a id in frequency table" , e  );
 		}		
@@ -155,7 +163,7 @@ public class Mariadb extends Storage {
 
 				++newUrls;
 
-				if( 0 == newUrls % batchSize ) {
+				if( 0 == newUrls % writeBSize ) {
 					psFrequency.executeBatch();
 					++counter;
 				}
@@ -165,7 +173,7 @@ public class Mariadb extends Storage {
 			}
 		}
 
-		if( 0 == newNodes % batchSize ) updateDB();
+		if( 0 == newNodes % writeBSize ) updateDB();
 
 	}
 
@@ -207,13 +215,16 @@ public class Mariadb extends Storage {
 		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >( 1024 );
 
 		if( missing.size() > 0 ) {
-
-			String sqlPrefix = "SELECT f.node_id node_id, xpath_id, hash, fq"  
-					+ " FROM frequency f JOIN urls u ON( f.node_id =  u.node_id AND u.url_id = " + pathId + " ) "
-					+ "WHERE ( xpath_id, hash ) IN ("
+			
+			String sqlPrefix = "SELECT n.id  node_id, n.xpath_id xpath_id, n.hash hash, fq"  
+					+ " FROM nodes n"
+					+ " JOIN urls u ON( n.id =  u.node_id AND u.url_id = " + pathId + " ) "
+					+ " JOIN frequency f ON( n.id = f.node_id )"
+					+ " WHERE n.host_id = " + hostId + " AND ( n.xpath_id, n.hash ) IN ("
 
 				, sqlPostfix = ")"
-				, nodeList = "";
+				, nodeList = ""
+			;
 
 			int i = 0;
 
@@ -221,7 +232,7 @@ public class Mariadb extends Storage {
 				nodeList += ",("+ temp.xpathId + "," + temp.hash + ")";
 				++i;
 
-				if( 0 == i % batchSize ) {
+				if( 0 == i % readBSize ) {
 					readDB( sqlPrefix + nodeList.substring( 1 ) + sqlPostfix, readFreq );
 					nodeList = "";
 				}
