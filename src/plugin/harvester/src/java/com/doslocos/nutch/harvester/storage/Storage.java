@@ -4,6 +4,8 @@ package com.doslocos.nutch.harvester.storage;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Vector;
 
@@ -19,11 +21,14 @@ import org.slf4j.LoggerFactory;
 public abstract class Storage {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Storage.class );
-	static public int bCounter = 0;
 
 	static protected LRUCache< NodeId, NodeValue > cache;
+	static protected Set<Integer> cleanupHostIds = null;
 	static protected int cacheThreshould, batchSize = 0;
 	static protected boolean readBackend = true;
+
+	static protected int pCounter = 0;
+	static protected int cleanUpInterval = 0;
 
 	/**
 	 * would contain all the nodes for this object page ( host + path )
@@ -47,6 +52,15 @@ public abstract class Storage {
 		int cacheSize = conf.getInt( "doslocos.harvester.cache.size" , 1000  );
 		float loadFactor = conf.getFloat( "doslocos.harvester.cache.loadfactor" , 0.8f );		
 		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
+		
+		boolean cleanUpEnalbed = conf.getBoolean( "doslocos.harvester.storage.cleaenup", false );
+		int rangeMin = conf.getInt( "doslocos.harvester.storage.cleanup.min", 1322 );
+		int rangeMax = conf.getInt( "doslocos.harvester.storage.cleanup.max", 2893 );
+		if( cleanUpEnalbed ) {
+			cleanUpInterval = rangeMin + (int)( Math.random() * Math.abs( (rangeMax - rangeMin) + 1) );
+			cleanupHostIds = new HashSet<Integer>( cleanUpInterval );
+			LOG.info( "clean up enabled. interval:" + cleanUpInterval );
+		}
 
 		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 1000 );
 		
@@ -118,10 +132,18 @@ public abstract class Storage {
 		return currentPage;
 	}
 
-	
 
-	public void pageEnd() {
-		
+	public void pageEnd( boolean learn ) {
+		if( learn ) {
+			++pCounter;
+			cleanupHostIds.add( hostId );
+			
+			if ( 0 == pCounter % cleanUpInterval ) {
+				LOG.info( "cleanUpDb called. pCounter:" + pCounter );
+				cleanUpDb( cleanupHostIds );
+				LOG.info( "cleanUp finished." );				
+			}
+		}
 	}
 	
 	public abstract void incNodeFreq( PageNodeId id, NodeValue val );
@@ -129,4 +151,6 @@ public abstract class Storage {
 	protected abstract void addToBackendList( PageNodeId id );
 	protected abstract Map< PageNodeId, NodeValue > getBackendFreq();
 	
+	//I added this code recently
+	protected abstract boolean cleanUpDb( Set<Integer> hostIds ) ;
 }

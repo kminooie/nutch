@@ -1,5 +1,6 @@
 package com.doslocos.nutch.harvester.storage;
 
+import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -8,6 +9,7 @@ import java.sql.Statement;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.hadoop.conf.Configuration;
@@ -22,9 +24,9 @@ import com.doslocos.nutch.harvester.NodeValue;
 public class Mariadb extends Storage {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Mariadb.class );
-	
+
 	static private BasicDataSource poolDS;
-	
+
 	static private int readBSize;
 	static private int writeBSize;
 
@@ -38,32 +40,32 @@ public class Mariadb extends Storage {
 
 	static public void set( Configuration conf ) {
 		Storage.set( conf );
-		
+
 		String DBHOST = conf.get("doslocos.harvester.mariadb.host", "localhost" );
 		String SCHEMA = conf.get("doslocos.harvester.mariadb.schema", "nutch_harvester_db" );
 		String USER = conf.get("doslocos.harvester.mariadb.username", "root" );
 		String PASS = conf.get("doslocos.harvester.mariadb.password", "" );
-		
+
 		int maxTotal = conf.getInt("doslocos.harvester.mariadb.poolMaxTotal", 8 );
 		int maxIdle = conf.getInt("doslocos.harvester.mariadb.poolMaxIdle", 2 );
-		
+
 		readBSize = conf.getInt("doslocos.harvester.mariadb.readBatchSize", 500 );
 		writeBSize = conf.getInt("doslocos.harvester.mariadb.writeBatchSize", 2000 );
 
-		
+
 		LOG.info( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
 		LOG.info( "poolMaxTotal: " + maxTotal + " poolMaxIdle: " + maxIdle );
 		LOG.info( "readBatchSize: " + readBSize + " writeBatchSize: " + writeBSize );
-		
+
 		poolDS = new BasicDataSource();
-	 
+
 		poolDS.setDriverClassName( "org.mariadb.jdbc.Driver" );
 		poolDS.setUrl( "jdbc:mysql://"+DBHOST+"/"+SCHEMA+"?rewriteBatchedStatements=true" );
 		poolDS.setUsername( USER );
 		poolDS.setPassword( PASS );
 		poolDS.setMaxTotal( maxTotal );
 		poolDS.setMaxIdle( maxIdle );
-		
+
 		try {
 			Connection conn = poolDS.getConnection();
 
@@ -112,16 +114,15 @@ public class Mariadb extends Storage {
 			++newNodes;
 
 		} catch(Exception e) {
-			LOG.error( "Error while adding a id in frequency table" , e  );
+			LOG.error( "Error while adding an id in frequency table" , e  );
 		}
 
 		if( 0 == newNodes % writeBSize ) updateDB();
 	}
 
 
-
 	@Override
-	public void pageEnd(){
+	public void pageEnd( boolean learn ){
 
 		updateDB();
 
@@ -130,16 +131,16 @@ public class Mariadb extends Storage {
 			conn.close();
 			LOG.info( "Page Ended. counter is:" + counter );
 		}catch(Exception e){
-			LOG.error( "Error while adding a id in frequency table" , e  );
+			LOG.error( "Error while adding an id in frequency table" , e  );
 		}		
 
-		super.pageEnd();
+		super.pageEnd( learn );
 	}
 
 
 	@Override
 	public void incNodeFreq( PageNodeId id, NodeValue val ) {
-	//	LOG.debug( "incNodeFreq: id:" + id + " val:" + val );
+		//	LOG.debug( "incNodeFreq: id:" + id + " val:" + val );
 		if( null == val ) {
 			try {
 
@@ -195,6 +196,11 @@ public class Mariadb extends Storage {
 			}			
 			++counter;
 			//LOG.debug("updated nodes.");
+		}catch(BatchUpdateException bue){
+			
+			LOG.debug("take care about batch update exception");
+			//TODO solve the transaction exception and go and do it again
+
 		}catch(Exception e){
 			LOG.error( "Error while updateing nodes:" , e  );
 		}
@@ -215,16 +221,16 @@ public class Mariadb extends Storage {
 		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >( 1024 );
 
 		if( missing.size() > 0 ) {
-			
+
 			String sqlPrefix = "SELECT n.id  node_id, n.xpath_id xpath_id, n.hash hash, fq"  
 					+ " FROM nodes n"
 					+ " JOIN urls u ON( n.id =  u.node_id AND u.url_id = " + pathId + " ) "
 					+ " JOIN frequency f ON( n.id = f.node_id )"
 					+ " WHERE n.host_id = " + hostId + " AND ( n.xpath_id, n.hash ) IN ("
 
-				, sqlPostfix = ")"
-				, nodeList = ""
-			;
+					, sqlPostfix = ")"
+					, nodeList = ""
+					;
 
 			int i = 0;
 
@@ -271,10 +277,44 @@ public class Mariadb extends Storage {
 		}
 	}
 
+	//the sql must be correct
+	@Override
+	protected boolean cleanUpDb( Set<Integer> hostNames ){
+		boolean result = true ;
+		String hostNameList = "";
+		String sqlCommand = "DELETE FROM nodes WHERE id IN ("
+				+ " SELECT nid FROM nodes n JOIN frequency f ON ("
+				+ " nid=f.node_id AND f.frequency =1 ) WHERE host_id IN ( "+hostNames+ " )";
+	
+		for (Integer hostName: hostNames){
+			
+			hostNameList += hostName;
+			
+		}
+
+
+		hostNameList = hostNameList.substring(0, hostNameList.length() - 1);
+
+
+		
+		try{
+			
+			Statement stmtquerry = conn.createStatement();
+			stmtquerry.executeQuery( sqlCommand );
+
+
+
+		}catch(Exception e){
+			result = false ;
+			LOG.error("Exception while clean nodes which have frequency value 1",e);
+		}
+
+		return result;
+	}
 
 	@Override
 	protected void finalize(){
-		
+
 		if (conn != null) {
 			try {
 				conn.close();
@@ -313,6 +353,7 @@ public class Mariadb extends Storage {
 
 	}
 
-
+	
+	
 }
 

@@ -2,6 +2,7 @@ package com.doslocos.nutch.harvester;
 
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -11,6 +12,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.jsoup.nodes.Node;
 
 import com.doslocos.nutch.harvester.storage.Storage;
+
 import com.doslocos.nutch.util.NodeUtil;
 
 import org.slf4j.Logger;
@@ -24,7 +26,7 @@ public class Harvester {
 
 	private String connClassName;
 	private Class<?> connClass;
-	
+
 
 	public Harvester( Configuration conf ){
 
@@ -57,30 +59,30 @@ public class Harvester {
 		}
 	}
 
-	
+
 	public void die() {
 		System.exit( 1 );
 	}
 
-	
+
 	public boolean learn( String HTMLBody, String host, String path ) {
-		
+
 		Map<PageNodeId, NodeValue > map = null;
 		boolean result = false;
-		
+
 		Storage storage = getStorage( host, path );
 
 		try{
-			
+
 			Node pageNode = NodeUtil.parseDom( HTMLBody );
 
 			readAllNodes( storage, pageNode, "html/body" );			
 			map = storage.getAllFreq();
 
 			updateNodes( storage, map, pageNode, "html/body" );
-			
-			storage.pageEnd();
-			
+
+			storage.pageEnd( true );
+
 			LOG.debug("learning function finish for : "+ host+path);
 			result=true;
 		}catch( Exception e ){
@@ -95,18 +97,18 @@ public class Harvester {
 		LOG.debug( "start filtering host: " + host + " path: " + path );
 		Map<PageNodeId, NodeValue > map = null;
 		String result = null;
-		
+
 		Storage storage = getStorage( host, path );
 
 		try{
 			Node pageNode = NodeUtil.parseDom( HTMLBody );
-			
+
 			readAllNodes( storage, pageNode, "html/body" );			
 			map = storage.getAllFreq();
 
 			result = filterNode( storage, map, pageNode, "html/body" );
-			storage.pageEnd();
-			
+			storage.pageEnd( false );
+
 			LOG.debug("filter function finished for : "+host+path);
 		}catch( Exception e ){
 			LOG.error( "Exception while filtering host: " + host, e );
@@ -117,7 +119,7 @@ public class Harvester {
 		return result;
 	}
 
-	
+
 	private Storage getStorage( String host, String path ) {
 		Storage storage = null;
 
@@ -127,33 +129,33 @@ public class Harvester {
 			LOG.error( "Failed to instanciate storage: ", e );
 			die();
 		}
-		
+
 		return storage;
 	}
-	
 
-	
+
+
 	private void readAllNodes( Storage k, Node node, String xpath ) {
 		Integer hash = node.hashCode();
-		
-				
+
+
 		k.addNodeToList( xpath, hash );
 		for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 			readAllNodes( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
 		}
 	}
 
-	
-	
+
+
 	private void updateNodes( final Storage storage, final Map<PageNodeId, NodeValue> map, final Node node, final String xpath ) {
 		PageNodeId item = new PageNodeId( xpath.hashCode(), node.hashCode() );
-		
+
 		NodeValue val = map.get( item );
-		
+
 		storage.incNodeFreq( item, val );
-		
+
 		if( null == val ||  val.frequency < frequency_threshould ) {
-			
+
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 				updateNodes( storage, map, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
 			}
@@ -161,14 +163,14 @@ public class Harvester {
 	}
 
 
-	
+
 	private String filterNode( final Storage storage, final Map<PageNodeId, NodeValue> map, final Node node, final String xpath ) {
 		int hash = node.hashCode();
 		String content = "";
 
 		PageNodeId id = new PageNodeId( xpath, hash );
 		NodeValue val  = map.get( id );
-		
+
 		//LOG.debug("filterNode: id:" + id + " val:" + val );
 		if( null == val || val.frequency < frequency_threshould ) {
 			content = NodeUtil.extractText( node );
@@ -182,6 +184,5 @@ public class Harvester {
 
 		return content.trim();
 	}
-
 
 }
