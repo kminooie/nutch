@@ -2,13 +2,9 @@ package com.doslocos.nutch.harvester;
 
 import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 
-// import org.jsoup.Jsoup;
-// import org.jsoup.nodes.Document;
-// import org.jsoup.select.Elements;        
 import org.jsoup.nodes.Node;
 
 import com.doslocos.nutch.harvester.storage.Storage;

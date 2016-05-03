@@ -197,7 +197,7 @@ public class Mariadb extends Storage {
 			++counter;
 			//LOG.debug("updated nodes.");
 		}catch(BatchUpdateException bue){
-			
+
 			LOG.debug("take care about batch update exception");
 			//TODO solve the transaction exception and go and do it again
 
@@ -282,23 +282,22 @@ public class Mariadb extends Storage {
 	protected boolean cleanUpDb( Set<Integer> hostNames ){
 		boolean result = true ;
 		String hostNameList = "";
-		String sqlCommand = "DELETE FROM nodes WHERE id IN ("
-				+ " SELECT nid FROM nodes n JOIN frequency f ON ("
-				+ " nid=f.node_id AND f.frequency =1 ) WHERE host_id IN ( "+hostNames+ " )";
-	
+
 		for (Integer hostName: hostNames){
-			
-			hostNameList += hostName;
-			
+
+			hostNameList += hostName + " , ";
+
 		}
 
+		hostNameList = hostNameList.substring(0, hostNameList.length() - 2);
 
-		hostNameList = hostNameList.substring(0, hostNameList.length() - 1);
+		String sqlCommand = "DELETE n,u FROM nodes n JOIN urls u ON"
+				+ " ( n.id = u.node_id ) JOIN frequency f ON"
+				+ " ( n.id = f.node_id ) WHERE n.host_id IN"
+				+ " ( " + hostNameList + " ) AND fq <2 ;";
 
-
-		
 		try{
-			
+
 			Statement stmtquerry = conn.createStatement();
 			stmtquerry.executeQuery( sqlCommand );
 
@@ -353,7 +352,7 @@ public class Mariadb extends Storage {
 
 	}
 
-	
-	
+
+
 }
 

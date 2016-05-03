@@ -3,10 +3,8 @@ package com.doslocos.nutch.harvester;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashSet;
+
 import java.util.Random;
-import java.util.Set;
-import java.util.Vector;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.nutch.parse.HTMLMetaTags;
@@ -25,9 +23,7 @@ public class TrainingPart implements HtmlParseFilter{
 	public static final Logger LOG = LoggerFactory.getLogger(TrainingPart.class);
 	public static Configuration conf;
 	public static Harvester kbc;
-	private static int countPath = 0;
 	public static int freqCleanUp;
-	//I added this line
 	
 	public static int max =20000 ;
 	
@@ -41,8 +37,6 @@ public class TrainingPart implements HtmlParseFilter{
 
 			String pathName = netUrl.getPath();
 			String hostName = netUrl.getHost();
-
-			
 
 			kbc.learn( HTMLBody, hostName, pathName );
 			LOG.debug("learning part finish for : "+hostName+ pathName);
@@ -64,12 +58,7 @@ public class TrainingPart implements HtmlParseFilter{
 
 	public void setConf(Configuration conf) {
 		if( null == TrainingPart.conf ) {
-			
-			//I added recently
-			Random rn = new Random();
-			max = (int) (freqCleanUp*(rn.nextFloat()+1));
-			freqCleanUp = conf.getInt("doslocos.harvester.frequency.cleanUp", 20000);
-			
+						
 			TrainingPart.conf = conf;
 			kbc = new Harvester( conf);
 			

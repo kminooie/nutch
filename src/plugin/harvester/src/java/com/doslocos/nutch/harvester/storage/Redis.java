@@ -2,6 +2,7 @@ package com.doslocos.nutch.harvester.storage;
 
 
 import java.util.Map;
+import java.util.Set;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 
@@ -175,7 +176,7 @@ public class Redis extends Storage {
 	
 
 	@Override
-	public void pageEnd() {
+	public void pageEnd( boolean learn ) {
 		LOG.debug( "PageEnd was called" );
 	}
 
@@ -187,6 +188,13 @@ public class Redis extends Storage {
 		}
 		
 		return read;
+	}
+
+
+	@Override
+	protected boolean cleanUpDb(Set<Integer> hostIds) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 }

@@ -53,7 +53,7 @@ public abstract class Storage {
 		float loadFactor = conf.getFloat( "doslocos.harvester.cache.loadfactor" , 0.8f );		
 		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
 		
-		boolean cleanUpEnalbed = conf.getBoolean( "doslocos.harvester.storage.cleaenup", false );
+		boolean cleanUpEnalbed = conf.getBoolean( "doslocos.harvester.storage.cleanup", false );
 		int rangeMin = conf.getInt( "doslocos.harvester.storage.cleanup.min", 1322 );
 		int rangeMax = conf.getInt( "doslocos.harvester.storage.cleanup.max", 2893 );
 		if( cleanUpEnalbed ) {
@@ -138,7 +138,7 @@ public abstract class Storage {
 			++pCounter;
 			cleanupHostIds.add( hostId );
 			
-			if ( 0 == pCounter % cleanUpInterval ) {
+			if (( cleanUpInterval != 0 ) && 0 == pCounter % cleanUpInterval ) {
 				LOG.info( "cleanUpDb called. pCounter:" + pCounter );
 				cleanUpDb( cleanupHostIds );
 				LOG.info( "cleanUp finished." );				
@@ -151,6 +151,5 @@ public abstract class Storage {
 	protected abstract void addToBackendList( PageNodeId id );
 	protected abstract Map< PageNodeId, NodeValue > getBackendFreq();
 	
-	//I added this code recently
 	protected abstract boolean cleanUpDb( Set<Integer> hostIds ) ;
 }

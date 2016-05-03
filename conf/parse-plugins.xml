@@ -71,6 +71,14 @@
 		<plugin id="harvester" />
 	</mimeType>
 	
+	<mimeType name="text/html">
+		<plugin id="ogExtractor" />
+	</mimeType>
+    
+    <mimeType name="application/xhtml+xml">
+		<plugin id="ogExtractor" />
+	</mimeType>
+	
 	<mimeType name="text/xml">
 		<plugin id="parse-tika" />
 		<plugin id="feed" />
@@ -97,6 +105,9 @@
 			
       <alias name="harvester"
 			extension-id="com.doslocos.nutch.harvester.TrainigPart" />
+			
+		<alias name="ogExtractor"
+			extension-id="com.doslocos.nutch.ogExtractor.Extractor" />
 			
        <alias name="parse-js" extension-id="JSParser" />
 		<alias name="feed"
