@@ -62,7 +62,7 @@
      <ant dir="parse-js" target="deploy"/>
      <ant dir="parse-html" target="deploy"/>
      <ant dir="harvester" target="deploy"/>
-     <ant dir="ogExtractor" target="deploy"/>
+     <!-- <ant dir="ogExtractor" target="deploy"/> -->
      <ant dir="parse-metatags" target="deploy"/>
      <ant dir="parse-swf" target="deploy"/>
      <ant dir="parse-tika" target="deploy"/>
@@ -162,9 +162,9 @@
     <ant dir="indexer-elastic" target="clean"/>
     <ant dir="indexer-solr" target="clean"/>
     <ant dir="language-identifier" target="clean"/>
-    <!-- <ant dir="lib-commons-httpclient" target="clean"/> -->
+    <ant dir="lib-commons-httpclient" target="clean"/> 
     <ant dir="lib-http" target="clean"/>
-    <!-- <ant dir="lib-lucene-analyzers" target="clean"/>-->
+    <ant dir="lib-lucene-analyzers" target="clean"/>
     <ant dir="lib-nekohtml" target="clean"/>
     <ant dir="lib-regex-filter" target="clean"/>
     <ant dir="lib-xml" target="clean"/>

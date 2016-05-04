@@ -279,22 +279,25 @@ public class Mariadb extends Storage {
 
 	//the sql must be correct
 	@Override
-	protected boolean cleanUpDb( Set<Integer> hostNames ){
+	protected boolean cleanUpDb( Set<Integer> hostIds ){
 		boolean result = true ;
-		String hostNameList = "";
-
-		for (Integer hostName: hostNames){
-
-			hostNameList += hostName + " , ";
-
+		
+		String sqlCommand = "DELETE n,u FROM nodes n"
+				+ " JOIN urls u ON ( n.id = u.node_id )"
+				+ " JOIN frequency f ON ( n.id = f.node_id )"
+				+ " WHERE fq < 2";
+		
+		if( hostIds.size()  > 0 ) {
+			String hostNameList = "";
+			for (Integer hostId: hostIds){
+				hostNameList += "," + hostId;
+			}
+			hostNameList = hostNameList.substring( 1 );
+			
+			sqlCommand += " AND n.host_id IN ( " + hostNameList + ")"; 
 		}
-
-		hostNameList = hostNameList.substring(0, hostNameList.length() - 2);
-
-		String sqlCommand = "DELETE n,u FROM nodes n JOIN urls u ON"
-				+ " ( n.id = u.node_id ) JOIN frequency f ON"
-				+ " ( n.id = f.node_id ) WHERE n.host_id IN"
-				+ " ( " + hostNameList + " ) AND fq <2 ;";
+		
+		sqlCommand += ";";
 
 		try{
 
@@ -339,7 +342,7 @@ public class Mariadb extends Storage {
 				conn = poolDS.getConnection();
 				conn.setAutoCommit( false );
 
-				conn.setTransactionIsolation( Connection.TRANSACTION_READ_COMMITTED );
+				conn.setTransactionIsolation( Connection.TRANSACTION_READ_UNCOMMITTED );
 
 				LOG.debug( "got connection from pool" );
 				renew = false;
@@ -348,11 +351,6 @@ public class Mariadb extends Storage {
 			}
 		}
 
-
-
 	}
-
-
-
 }
 
