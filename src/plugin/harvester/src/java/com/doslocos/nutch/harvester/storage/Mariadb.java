@@ -129,7 +129,7 @@ public class Mariadb extends Storage {
 		try {
 			conn.commit();
 			conn.close();
-			LOG.info( "Page Ended. counter is:" + counter );
+			LOG.info( "Page Ended. db counter is:" + counter );
 		}catch(Exception e){
 			LOG.error( "Error while adding an id in frequency table" , e  );
 		}		
@@ -292,6 +292,8 @@ public class Mariadb extends Storage {
 			for (Integer hostId: hostIds){
 				hostNameList += "," + hostId;
 			}
+
+			hostIds.clear();
 			hostNameList = hostNameList.substring( 1 );
 			
 			sqlCommand += " AND n.host_id IN ( " + hostNameList + ")"; 
@@ -300,7 +302,7 @@ public class Mariadb extends Storage {
 		sqlCommand += ";";
 
 		try{
-
+			checkConnection();
 			Statement stmtquerry = conn.createStatement();
 			stmtquerry.executeQuery( sqlCommand );
 
