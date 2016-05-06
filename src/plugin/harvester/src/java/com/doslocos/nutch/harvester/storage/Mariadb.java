@@ -32,7 +32,6 @@ public class Mariadb extends Storage {
 
 	private Connection conn = null;
 	private PreparedStatement  psNode, psFrequency;
-	boolean psNodeDirty = false, psFrequencyDirty = false;
 	private ResultSet tempRs = null;
 
 	private int newNodes = 0;
@@ -67,23 +66,68 @@ public class Mariadb extends Storage {
 		poolDS.setMaxIdle( maxIdle );
 
 		try {
-			Connection conn = poolDS.getConnection();
+			Connection conn = checkConnection( null );
 
 			if( null != conn ) {
-				LOG.debug( "MariaDB connected." );
+				LOG.info( "MariaDB connected." );
 			} else {
 				LOG.error( "Failed to connect to MariaDB." );
 				System.exit( 1 );
 			}
+			
+			int tLevel = conn.getTransactionIsolation();
+
+			if( Connection.TRANSACTION_READ_UNCOMMITTED == tLevel ) {
+				LOG.info( "Transaction level is READ_UNCOMMITTED" );
+			} else if( Connection.TRANSACTION_READ_COMMITTED == tLevel ) {
+				LOG.info( "Transaction level is READ_COMMITTED" );
+			} else if( Connection.TRANSACTION_REPEATABLE_READ == tLevel ) {
+				LOG.info( "Transaction level is REPEATABLE_READ" );
+			} else if( Connection.TRANSACTION_SERIALIZABLE == tLevel ) {
+				LOG.info( "Transaction level is SERIALIZABLE" );
+			} else if( Connection.TRANSACTION_NONE == tLevel ) {
+				LOG.info( "Transaction level is NONE" );
+			} else {
+				LOG.warn( "Transaction level is " + tLevel );
+			}			
+			
 			conn.close();
 		} catch( Exception e ) {
 			LOG.error( "Exception initilizing the connection pool: ", e );
 		}		
 	}
+	
+
+	static private Connection checkConnection( Connection conn ) {
+		boolean renew = false;
+
+		try {
+			if ( null == conn || conn.isClosed() ) renew = true;
+		} catch ( Exception e ) {
+			LOG.error( "Exception while trying to check connection:", e );
+			renew = true;
+		}
+		if( renew ) {
+			try {
+				conn = poolDS.getConnection();
+				
+				conn.setAutoCommit( false );
+				conn.setTransactionIsolation( Connection.TRANSACTION_READ_UNCOMMITTED );
+				// conn.commit();
+				
+				LOG.debug( "got connection from pool" );
+				renew = false;
+			} catch( Exception e ) {
+				LOG.error( "Failed to get connection from pool:", e );
+			}
+		}
+		
+		return conn;
+	}
 
 	public Mariadb( String host, String path ) {
 		super( host, path );
-		checkConnection();
+		conn = checkConnection( conn );
 
 		try {
 			psNode = conn.prepareStatement( 
@@ -125,16 +169,21 @@ public class Mariadb extends Storage {
 	public void pageEnd( boolean learn ){
 
 		updateDB();
+		
+		super.pageEnd( learn );
 
 		try {
 			conn.commit();
+			
+			if( null != psNode ) psNode.close();
+			if( null != psFrequency ) psFrequency.close();
+			
 			conn.close();
 			LOG.info( "Page Ended. db counter is:" + counter );
 		}catch(Exception e){
-			LOG.error( "Error while adding an id in frequency table" , e  );
-		}		
+			LOG.error( "Exception in pageEnd" , e  );
+		}
 
-		super.pageEnd( learn );
 	}
 
 
@@ -179,7 +228,7 @@ public class Mariadb extends Storage {
 	}
 
 	protected void updateDB( ) {
-		checkConnection();
+		conn = checkConnection( conn );
 		try {
 			int[] executeResult = psNode.executeBatch();
 
@@ -254,7 +303,7 @@ public class Mariadb extends Storage {
 
 	protected void readDB( String sql, Map<PageNodeId, NodeValue> map ) {
 
-		checkConnection();
+		conn = checkConnection( conn );
 
 		try {
 			Statement stmt = conn.createStatement();
@@ -302,7 +351,7 @@ public class Mariadb extends Storage {
 		sqlCommand += ";";
 
 		try{
-			checkConnection();
+			conn = checkConnection( conn );
 			Statement stmtquerry = conn.createStatement();
 			stmtquerry.executeQuery( sqlCommand );
 
@@ -330,29 +379,5 @@ public class Mariadb extends Storage {
 	}
 
 
-	private void checkConnection() {
-		boolean renew = false;
-
-		try {
-			if ( null == conn || conn.isClosed() ) renew = true;
-		} catch ( Exception e ) {
-			LOG.error( "Exception while trying to check connection:", e );
-			renew = true;
-		}
-		if( renew ) {
-			try {
-				conn = poolDS.getConnection();
-				conn.setAutoCommit( false );
-
-				conn.setTransactionIsolation( Connection.TRANSACTION_READ_UNCOMMITTED );
-
-				LOG.debug( "got connection from pool" );
-				renew = false;
-			} catch( Exception e ) {
-				LOG.error( "Failed to get connection from pool:", e );
-			}
-		}
-
-	}
 }
 

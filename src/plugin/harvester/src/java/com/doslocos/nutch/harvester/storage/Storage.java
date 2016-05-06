@@ -24,7 +24,7 @@ public abstract class Storage {
 
 	static protected LRUCache< NodeId, NodeValue > cache;
 	static protected Set<Integer> cleanupHostIds = null;
-	static protected int cacheThreshould, batchSize = 0;
+	static protected int cacheThreshould = 0;
 	static protected boolean readBackend = true;
 
 	static protected int pCounter = 0;
@@ -60,15 +60,17 @@ public abstract class Storage {
 			cleanUpInterval = rangeMin + (int)( Math.random() * Math.abs( (rangeMax - rangeMin) + 1) );
 			cleanupHostIds = new HashSet<Integer>( cleanUpInterval );
 			LOG.info( "clean up enabled. interval:" + cleanUpInterval );
+		} else {
+			LOG.info( "Storage cleanup disabled." );
 		}
 
-		batchSize = conf.getInt( "doslocos.harvester.storage.batchsize", 1000 );
-		
-		LOG.info( "batch size:" + batchSize );
 		LOG.info( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
 		LOG.info( "Initilizing cache threshold : " +cacheThreshould );
 
-		if( cacheSize < 1000 ) cacheSize = 1000;
+		if( cacheSize < 1000 ) {
+			cacheSize = 1000;
+			LOG.info( "over writing cahce size to " +  cacheSize );
+		}
 		
 		cache = new LRUCache< NodeId, NodeValue >( cacheSize, loadFactor );
 	}
@@ -134,11 +136,11 @@ public abstract class Storage {
 
 
 	public void pageEnd( boolean learn ) {
-		if( learn ) {
+		if( learn && ( cleanUpInterval != 0 )  ) {
 			++pCounter;
 			cleanupHostIds.add( hostId );
 			
-			if (( cleanUpInterval != 0 ) && 0 == pCounter % cleanUpInterval ) {
+			if ( 0 == pCounter % cleanUpInterval ) {
 				LOG.info( "cleanUpDb called. pCounter:" + pCounter );
 				cleanUpDb( cleanupHostIds );
 				LOG.info( "cleanUp finished." );				
