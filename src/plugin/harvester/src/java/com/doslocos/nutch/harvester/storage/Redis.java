@@ -109,7 +109,7 @@ public class Redis extends Storage {
 				
 				NodeId id = new NodeId( hostId, pid );
 				byte nodeBytes[] = id.getBytes();
-				jedis.sadd( nodeBytes, pathIdBytes ).intValue();
+				jedis.sadd( nodeBytes, pathIdBytes );
 				achived = true;
 			}catch(Exception e){
 
@@ -122,7 +122,6 @@ public class Redis extends Storage {
 				}
 			}
 		}
-
 	}
 	
 	

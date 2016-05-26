@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Vector;
+import java.util.Iterator;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.doslocos.nutch.util.LRUCache;
 import com.doslocos.nutch.harvester.PageNodeId;
@@ -30,6 +33,10 @@ public abstract class Storage {
 	static protected int pCounter = 0;
 	static protected int cleanUpInterval = 0;
 
+	//new stuff
+	static protected ConcurrentHashMap< Integer, LRUCache< PageNodeId, Set< Integer > > > mainCache 
+		= new ConcurrentHashMap< Integer, LRUCache< PageNodeId, Set< Integer > > >( 1024 );
+	
 	/**
 	 * would contain all the nodes for this object page ( host + path )
 	 */
@@ -42,8 +49,7 @@ public abstract class Storage {
 	public String host;
 	public String path;
 
-	public int hostId;
-	public int pathId;
+	public Integer hostId = 0, pathId = 0;
 
 	private int cacheHit = 0, cacheMissed = 0;
 
@@ -90,6 +96,13 @@ public abstract class Storage {
 		}
 		this.path = path;
 		pathId = stringToId( path );
+		
+		// new stuff 
+		if( null == mainCache.get( hostId ) ) {
+			mainCache.put( hostId, new LRUCache< PageNodeId, Set< Integer > >( 4096, .9f ) );
+		}
+		
+		
 	}
 
 
@@ -106,9 +119,32 @@ public abstract class Storage {
 			++cacheHit;
 			currentPage.put( id, val );
 		}
-
+		
+		// new stuff
+		Set<Integer> nodeSet = mainCache.get( hostId ).get( id );
+		
+		if( null == nodeSet ) {
+			mainCache.get( hostId ).put(id, Collections.synchronizedSet( new HashSet<Integer>( 2048, .8f ) ) );
+			nodeSet = mainCache.get( hostId ).get( id );
+		}
+		
+		nodeSet.add( pathId );
+		
 	}
 
+	
+	public void dumpMainCache() {
+		for( Map.Entry< Integer, LRUCache< PageNodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
+			Integer hId = entry.getKey();
+			LRUCache< PageNodeId, Set< Integer > > hostCache = entry.getValue();
+			
+			LOG.info( "hostId: " + hId );
+			for( Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator(); itr.hasNext(); ) {
+				Map.Entry< PageNodeId, Set< Integer > > pageEntry = itr.next();
+				LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().size() );
+			}
+		}
+	}
 
 	public Map<PageNodeId, NodeValue> getAllFreq() {
 		LOG.debug( "page cache size:" + currentPage.size() );
@@ -129,8 +165,12 @@ public abstract class Storage {
 			currentPage.put( e.getKey(),val );
 		}
 		
+		
+		
 		LOG.info( "page cache size:" + currentPage.size() );
 		LOG.info( "hit:" + cacheHit + " missed:" + cacheMissed );
+		
+		dumpMainCache();
 		return currentPage;
 	}
 
