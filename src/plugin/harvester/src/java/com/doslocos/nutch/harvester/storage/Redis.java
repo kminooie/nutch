@@ -96,6 +96,38 @@ public class Redis extends Storage {
 	}
 	
 	
+	public void saveNode( PageNodeId pid, Set<Integer> paths ) {
+		int achived = 3;
+		int size = paths.size();
+		
+		
+		byte pathBytes[][] = new byte[size][ Integer.BYTES ];
+		
+		for( Integer id : paths ) {
+			ByteBuffer.wrap( pathBytes[ --size ] ).putInt( id );
+		}
+		
+		while( 0 != achived ) {
+			try{
+				--achived;
+				jedis.sadd( ( new NodeId( hostId, pid ) ).getBytes(), pathBytes );
+				
+				break;
+			}catch(Exception e){
+
+				LOG.error("Exception while saving node:" + pid + " attempt(s) left:" + achived, e );				
+				initConnection();
+				
+			}
+		}
+		
+		if( 0 == achived ) {
+			LOG.error( "Could not save node:" + pid + ", skiping it." );
+		}
+		
+	}
+	
+	
 	@Override
 	public void incNodeFreq( PageNodeId pid, NodeValue val ) {
 
@@ -110,6 +142,8 @@ public class Redis extends Storage {
 				NodeId id = new NodeId( hostId, pid );
 				byte nodeBytes[] = id.getBytes();
 				jedis.sadd( nodeBytes, pathIdBytes );
+				
+				jedis.sadd
 				achived = true;
 			}catch(Exception e){
 
@@ -177,6 +211,7 @@ public class Redis extends Storage {
 	@Override
 	public void pageEnd( boolean learn ) {
 		LOG.debug( "PageEnd was called" );
+		super.pageEnd(learn);
 	}
 
 

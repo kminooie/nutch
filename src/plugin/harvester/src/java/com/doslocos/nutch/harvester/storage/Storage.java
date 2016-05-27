@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Vector;
 import java.util.Iterator;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.doslocos.nutch.util.LRUCache;
@@ -30,8 +31,8 @@ public abstract class Storage {
 	static protected int cacheThreshould = 0;
 	static protected boolean readBackend = true;
 
-	static protected int pCounter = 0;
-	static protected int cleanUpInterval = 0;
+	static protected AtomicInteger pCounter = null;
+	static protected int cleanUpInterval = 0, frequency_threshould;
 
 	//new stuff
 	static protected ConcurrentHashMap< Integer, LRUCache< PageNodeId, Set< Integer > > > mainCache 
@@ -46,15 +47,21 @@ public abstract class Storage {
 
 	public int counter = 0;
 
-	public String host;
-	public String path;
+	public String host, path;
 
 	public Integer hostId = 0, pathId = 0;
 
 	private int cacheHit = 0, cacheMissed = 0;
 
-	static public void set( Configuration conf ) {
+	static synchronized public void set( Configuration conf ) {
 
+		// prevent being set more than once
+		if( null != pCounter ) return;
+		
+		pCounter = new AtomicInteger();
+		
+		frequency_threshould =  conf.getInt( "doslocos.harvester.frequency_threshould" , 2  );
+		
 		int cacheSize = conf.getInt( "doslocos.harvester.cache.size" , 1000  );
 		float loadFactor = conf.getFloat( "doslocos.harvester.cache.loadfactor" , 0.8f );		
 		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
@@ -146,6 +153,34 @@ public abstract class Storage {
 		}
 	}
 
+	
+	public void pruneMainCache() {
+		for( Map.Entry< Integer, LRUCache< PageNodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
+			Integer hId = entry.getKey();
+			LRUCache< PageNodeId, Set< Integer > > hostCache = entry.getValue();
+			
+			LOG.info( "pruning hostId: " + hId + " with size " + hostCache.usedEntries() );
+			
+			// Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator();
+			Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.entrySet().iterator();			
+			
+			
+			while( itr.hasNext() ) {
+				Map.Entry< PageNodeId, Set< Integer > > pageEntry = itr.next();
+				if( pageEntry.getValue().size() < frequency_threshould ) {
+					LOG.info( "removing node: " + pageEntry.getKey() + " with size:" + pageEntry.getValue().size() );
+					itr.remove();
+				}				
+				
+			}
+			
+			LOG.info( "size after pruning: " + hostCache.usedEntries() );
+		}
+	}	
+	
+	
+	
+	
 	public Map<PageNodeId, NodeValue> getAllFreq() {
 		LOG.debug( "page cache size:" + currentPage.size() );
 		Map<PageNodeId, NodeValue> backendData = getBackendFreq();
@@ -175,17 +210,35 @@ public abstract class Storage {
 	}
 
 
+	public void filterEnd() {
+		pageEnd( false );
+	}
+	
+	public void learnEnd() {
+		pageEnd( true );
+	}
+	
 	public void pageEnd( boolean learn ) {
+		pCounter.incrementAndGet();
+		
+		if ( learn && ( cleanUpInterval != 0 ) && ( 0 == pCounter.intValue() % cleanUpInterval ) ) {
+			LOG.info( "cleanUpDb called. pCounter:" + pCounter );
+			pruneMainCache();				
+		}
+		
 		if( learn && ( cleanUpInterval != 0 )  ) {
-			++pCounter;
+			
 			cleanupHostIds.add( hostId );
 			
-			if ( 0 == pCounter % cleanUpInterval ) {
+			if ( 0 == pCounter.intValue() % cleanUpInterval ) {
 				LOG.info( "cleanUpDb called. pCounter:" + pCounter );
 				cleanUpDb( cleanupHostIds );
 				LOG.info( "cleanUp finished." );				
 			}
 		}
+		
+		
+		
 	}
 	
 	public abstract void incNodeFreq( PageNodeId id, NodeValue val );

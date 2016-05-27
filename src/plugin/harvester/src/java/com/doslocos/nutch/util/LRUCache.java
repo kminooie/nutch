@@ -7,7 +7,9 @@ package com.doslocos.nutch.util;
 
 import java.util.LinkedHashMap;
 import java.util.Collection;
+import java.util.Set;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.ArrayList;
 
 /**
@@ -100,6 +102,10 @@ public class LRUCache<K,V> {
 		return new ArrayList<Map.Entry<K,V>>(map.entrySet());
 	}
 
+	public synchronized Set<Entry<K, V>> entrySet() {
+		return map.entrySet();
+	}
+	
 	public synchronized Map<K,V> mget( ArrayList<K> arr ) {
 		Map<K,V> result = new LinkedHashMap<K,V>( arr.size(), 0.95f );
 		for( K key : arr ) {
