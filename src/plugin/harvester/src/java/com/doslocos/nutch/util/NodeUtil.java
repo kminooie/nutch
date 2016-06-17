@@ -54,4 +54,9 @@ public class NodeUtil {
 		return string1;	
 	}
 
+
+	static public int stringToId( String str ) {
+		return str.hashCode();
+	}
+
 }
