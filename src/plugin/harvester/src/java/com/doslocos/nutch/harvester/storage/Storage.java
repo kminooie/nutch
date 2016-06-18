@@ -173,7 +173,7 @@ public abstract class Storage {
 		
 		if( null == nodeSet ) {
 			hostCache.put(id, nodeSet = Collections.synchronizedSet( new HashSet<Integer>( 2048, .8f ) ) );
-			LOG.info( "allocating new set for pageNodeId:" + id );
+			// LOG.info( "allocating new set for pageNodeId:" + id );
 		}
 		
 		nodeSet.add( pathId );
@@ -206,7 +206,7 @@ public abstract class Storage {
 		LOG.info( "page cache size:" + currentPage.size() );
 		LOG.info( "hit:" + cacheHit + " missed:" + cacheMissed );
 		
-		dumpMainCache();
+		// dumpMainCache();
 		return currentPage;
 	}
 
@@ -237,6 +237,12 @@ public abstract class Storage {
 	
 	public void pageEnd( boolean learn ) {
 		
+	}
+	
+
+	protected void finalize() {
+		System.err.println( "Storage finalize was called" );
+		LOG.info( "Storage finalize was called." );
 	}
 	
 	public abstract void incNodeFreq( PageNodeId id, NodeValue val );

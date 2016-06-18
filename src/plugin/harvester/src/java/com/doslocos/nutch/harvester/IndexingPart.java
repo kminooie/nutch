@@ -19,10 +19,10 @@ public class IndexingPart implements IndexingFilter {
 
 	public static final Logger LOG = LoggerFactory.getLogger(IndexingPart.class);
 
-	public static String newFieldName = "harvestedContent";
+	private String newFieldName = "harvested";
 	private Configuration conf;
-	private Harvester nodeParse;
-	private String[] fieldsRemove; 
+	private Harvester harvester;
+	private String[] fieldsToRemove; 
 	
 	
 	@Override
@@ -36,17 +36,16 @@ public class IndexingPart implements IndexingFilter {
 			netUrl = new URL( doc.getFieldValue("url").toString() );
 			LOG.info("extract the path: "+netUrl.getPath());
 		} catch (MalformedURLException e) {
-			
-			LOG.error("Exception while extract path from Url");
+			LOG.error("Exception while extracting path from Url");
 		}
 
-		String textContent = nodeParse.filter( 
+		String textContent = harvester.filter( 
 			parse.getData().getParseMeta().get("rawcontent"), 
 			doc.getFieldValue("host").toString(), 
 			netUrl.getPath() 
 		);
 
-		for (String val : fieldsRemove) {
+		for (String val : fieldsToRemove) {
 			doc.removeField( val );
 		}
 
@@ -59,23 +58,26 @@ public class IndexingPart implements IndexingFilter {
 	}
 
 
-
 	public void setConf(Configuration conf) {
-		nodeParse = new Harvester( conf );
+		harvester = new Harvester( conf );
 
 		newFieldName =  conf.get( "doslocos.harvester.fieldname" , newFieldName );
 		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
 		
-		fieldsRemove = conf.getStrings("doslocos.harvester.removefileds", new String[0] );
+		fieldsToRemove = conf.getStrings("doslocos.harvester.removefileds", new String[0] );
 
 		this.conf = conf;
 	}
+
 
 	public Configuration getConf() {
 		return this.conf;
 	}
 
 
-
+	protected void finalize() {
+		System.err.println( "IndexingPart finalize was called" );
+		LOG.info( "IndexingPart finalize was called." );
+	}
 
 }

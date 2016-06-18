@@ -367,7 +367,8 @@ public class Mariadb extends Storage {
 
 	@Override
 	protected void finalize(){
-
+		System.out.println( "mariadb finalize was called." );
+		LOG.info( "mariadb finalize was called." );
 		if (conn != null) {
 			try {
 				conn.close();
@@ -376,6 +377,7 @@ public class Mariadb extends Storage {
 			}
 			conn = null;
 		}
+		super.finalize();
 	}
 
 

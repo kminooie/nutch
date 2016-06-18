@@ -67,9 +67,12 @@ public class TrainingPart implements HtmlParseFilter{
 	}
 
 	public Configuration getConf() {
-
-
 		return TrainingPart.conf;
 	}
 
+
+	protected void finalize() {
+		System.err.println( "trainingPart finalize was called" );
+		LOG.info( "trainingPart finalize was called." );
+	}
 }

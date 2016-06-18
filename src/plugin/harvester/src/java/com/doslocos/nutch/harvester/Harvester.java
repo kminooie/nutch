@@ -57,6 +57,7 @@ public class Harvester {
 
 
 	public void die() {
+		// TODO: find out how to kill a mapreduce job
 		System.exit( 1 );
 	}
 
@@ -181,4 +182,9 @@ public class Harvester {
 		return content.trim();
 	}
 
+
+	protected void finalize() {
+		System.err.println( "Harvester finalize was called" );
+		LOG.info( "Harvester finalize was called." );
+	}
 }
