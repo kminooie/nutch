@@ -7,7 +7,7 @@ package com.doslocos.nutch.harvester;
 
 import java.nio.ByteBuffer;
 
-import com.doslocos.nutch.harvester.storage.Storage;
+import com.doslocos.nutch.util.NodeUtil;
 
 public class PageNodeId {
 
@@ -24,7 +24,7 @@ public class PageNodeId {
 
 
 	public PageNodeId( String xpath, int hash ) {
-		this.xpathId = Storage.stringToId( xpath );
+		this.xpathId = NodeUtil.stringToId( xpath );
 		this.hash = hash;
 	}
 	

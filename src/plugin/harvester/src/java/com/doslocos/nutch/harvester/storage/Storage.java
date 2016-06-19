@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.doslocos.nutch.util.LRUCache;
+import com.doslocos.nutch.util.NodeUtil;
 import com.doslocos.nutch.harvester.PageNodeId;
 import com.doslocos.nutch.harvester.NodeValue;
 
@@ -50,6 +51,8 @@ public abstract class Storage {
 	public String host, path;
 
 	public Integer hostId = 0, pathId = 0;
+	
+	protected LRUCache< PageNodeId, Set< Integer > > hostCache; 
 
 	private int cacheHit = 0, cacheMissed = 0;
 
@@ -88,73 +91,8 @@ public abstract class Storage {
 		cache = new LRUCache< NodeId, NodeValue >( cacheSize, loadFactor );
 	}
 
-	static public int stringToId( String str ) {
-		return str.hashCode();
-	}
-
-	public Storage( String host, String path ) {
-		this.host = host;
-		hostId = stringToId( host );
-
-		if ( null == path ){
-			path = "/" ;
-			LOG.debug("a path with null value change to / value");
-
-		}
-		this.path = path;
-		pathId = stringToId( path );
-		
-		// new stuff 
-		if( null == mainCache.get( hostId ) ) {
-			mainCache.put( hostId, new LRUCache< PageNodeId, Set< Integer > >( 4096, .9f ) );
-		}
-		
-		
-	}
-
-
-	public void addNodeToList( String xpath, int hash ) {
-		PageNodeId id = new PageNodeId( stringToId( xpath ), hash );
-		NodeId nid = new NodeId( hostId, id );
-		NodeValue val = cache.get( nid );
-
-		if( null == val ) {
-			++cacheMissed;
-
-			missing.add( id );
-		} else {
-			++cacheHit;
-			currentPage.put( id, val );
-		}
-		
-		// new stuff
-		Set<Integer> nodeSet = mainCache.get( hostId ).get( id );
-		
-		if( null == nodeSet ) {
-			mainCache.get( hostId ).put(id, Collections.synchronizedSet( new HashSet<Integer>( 2048, .8f ) ) );
-			nodeSet = mainCache.get( hostId ).get( id );
-		}
-		
-		nodeSet.add( pathId );
-		
-	}
-
 	
-	public void dumpMainCache() {
-		for( Map.Entry< Integer, LRUCache< PageNodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
-			Integer hId = entry.getKey();
-			LRUCache< PageNodeId, Set< Integer > > hostCache = entry.getValue();
-			
-			LOG.info( "hostId: " + hId );
-			for( Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator(); itr.hasNext(); ) {
-				Map.Entry< PageNodeId, Set< Integer > > pageEntry = itr.next();
-				LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().size() );
-			}
-		}
-	}
-
-	
-	public void pruneMainCache() {
+	static public void pruneMainCache() {
 		for( Map.Entry< Integer, LRUCache< PageNodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
 			Integer hId = entry.getKey();
 			LRUCache< PageNodeId, Set< Integer > > hostCache = entry.getValue();
@@ -178,9 +116,72 @@ public abstract class Storage {
 		}
 	}	
 	
+
+	static public void dumpMainCache() {
+		for( Map.Entry< Integer, LRUCache< PageNodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
+			Integer hId = entry.getKey();
+			LRUCache< PageNodeId, Set< Integer > > hostCache = entry.getValue();
+			
+			LOG.info( "hostId: " + hId );
+			for( Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator(); itr.hasNext(); ) {
+				Map.Entry< PageNodeId, Set< Integer > > pageEntry = itr.next();
+				LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().size() );
+			}
+		}
+	}
+
+
+	public Storage( String host, String path ) {
+		this.host = host;
+		hostId = NodeUtil.stringToId( host );
+
+		if ( null == path ){
+			path = "/" ;
+			LOG.debug("a path with null value change to / value");
+
+		}
+		this.path = path;
+		pathId = NodeUtil.stringToId( path );
+		
+		// new stuff		
+		synchronized( mainCache ) {
+			hostCache = mainCache.get( hostId );
+			if( null == hostCache ) {
+				mainCache.put( hostId, hostCache = new LRUCache< PageNodeId, Set< Integer > >( 4096, .9f ) );
+			}
+		}
+		
+	}
+
+
+	public void addNodeToList( String xpath, int hash ) {
+		PageNodeId id = new PageNodeId( NodeUtil.stringToId( xpath ), hash );
+		NodeId nid = new NodeId( hostId, id );
+		NodeValue val = cache.get( nid );
+
+		if( null == val ) {
+			++cacheMissed;
+
+			missing.add( id );
+		} else {
+			++cacheHit;
+			currentPage.put( id, val );
+		}
+		
+		// new stuff
+		Set<Integer> nodeSet = hostCache.get( id );
+		
+		if( null == nodeSet ) {
+			hostCache.put(id, nodeSet = Collections.synchronizedSet( new HashSet<Integer>( 2048, .8f ) ) );
+			// LOG.info( "allocating new set for pageNodeId:" + id );
+		}
+		
+		nodeSet.add( pathId );
+		
+	}
 	
-	
-	
+		
+		
 	public Map<PageNodeId, NodeValue> getAllFreq() {
 		LOG.debug( "page cache size:" + currentPage.size() );
 		Map<PageNodeId, NodeValue> backendData = getBackendFreq();
@@ -205,7 +206,7 @@ public abstract class Storage {
 		LOG.info( "page cache size:" + currentPage.size() );
 		LOG.info( "hit:" + cacheHit + " missed:" + cacheMissed );
 		
-		dumpMainCache();
+		// dumpMainCache();
 		return currentPage;
 	}
 
@@ -215,18 +216,12 @@ public abstract class Storage {
 	}
 	
 	public void learnEnd() {
-		pageEnd( true );
-	}
-	
-	public void pageEnd( boolean learn ) {
-		pCounter.incrementAndGet();
-		
-		if ( learn && ( cleanUpInterval != 0 ) && ( 0 == pCounter.intValue() % cleanUpInterval ) ) {
-			LOG.info( "cleanUpDb called. pCounter:" + pCounter );
+		if ( ( 0 != cleanUpInterval ) && ( 0 == pCounter.incrementAndGet() % cleanUpInterval ) ) {
+			LOG.info( "about to prune main cache. pCounter:" + pCounter );
 			pruneMainCache();				
 		}
 		
-		if( learn && ( cleanUpInterval != 0 )  ) {
+		if( 0 != cleanUpInterval ) {
 			
 			cleanupHostIds.add( hostId );
 			
@@ -235,10 +230,19 @@ public abstract class Storage {
 				cleanUpDb( cleanupHostIds );
 				LOG.info( "cleanUp finished." );				
 			}
-		}
+		}		
 		
+		pageEnd( true );
+	}
+	
+	public void pageEnd( boolean learn ) {
 		
-		
+	}
+	
+
+	protected void finalize() {
+		System.err.println( "Storage finalize was called" );
+		LOG.info( "Storage finalize was called." );
 	}
 	
 	public abstract void incNodeFreq( PageNodeId id, NodeValue val );

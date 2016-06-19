@@ -196,6 +196,8 @@ public class Redis extends Storage {
 
 	@Override
 	protected void finalize(){
+		System.err.println( "Redis finalize was called." );
+		LOG.info( "Redis finalize was called." );
 		if( null != jedis ) {
 			try {
 				jedis.close();
@@ -205,6 +207,7 @@ public class Redis extends Storage {
 			jedis = null;
 		}
 
+		super.finalize();
 	}
 	
 
