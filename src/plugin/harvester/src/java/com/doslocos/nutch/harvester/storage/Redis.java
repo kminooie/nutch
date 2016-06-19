@@ -10,7 +10,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.doslocos.nutch.harvester.PageNodeId;
+import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.NodeValue;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -28,7 +28,7 @@ public class Redis extends Storage {
 	static private JedisPool pool;
 	static private JedisPoolConfig poolConfig;
 
-	public final Map< PageNodeId, NodeValue > read = new HashMap< PageNodeId, NodeValue >( 1024 );
+	public final Map< NodeId, NodeValue > read = new HashMap< NodeId, NodeValue >( 1024 );
 	
 	private Jedis jedis;
 	private byte[] pathIdBytes = new byte[ Integer.BYTES ];
@@ -96,7 +96,7 @@ public class Redis extends Storage {
 	}
 	
 	
-	public void saveNode( PageNodeId pid, Set<Integer> paths ) {
+	public void saveNode( NodeId pid, Set<Integer> paths ) {
 		int achived = 3;
 		int size = paths.size();
 		
@@ -110,7 +110,7 @@ public class Redis extends Storage {
 		while( 0 != achived ) {
 			try{
 				--achived;
-				jedis.sadd( ( new NodeId( hostId, pid ) ).getBytes(), pathBytes );
+				jedis.sadd( ( new HostCache( hostId, pid ) ).getBytes(), pathBytes );
 				
 				break;
 			}catch(Exception e){
@@ -129,7 +129,7 @@ public class Redis extends Storage {
 	
 	
 	@Override
-	public void incNodeFreq( PageNodeId pid, NodeValue val ) {
+	public void incNodeFreq( NodeId pid, NodeValue val ) {
 
 		boolean achived = false;
 		int times = counter;
@@ -139,7 +139,7 @@ public class Redis extends Storage {
 
 				++counter;
 				
-				NodeId id = new NodeId( hostId, pid );
+				HostCache id = new HostCache( hostId, pid );
 				byte nodeBytes[] = id.getBytes();
 				jedis.sadd( nodeBytes, pathIdBytes );
 				
@@ -157,10 +157,10 @@ public class Redis extends Storage {
 			}
 		}
 	}
-	
+             	
 	
 	@Override
-	protected void addToBackendList( PageNodeId id ) {
+	protected void addToBackendList( NodeId id ) {
 
 		boolean result = false;
 		boolean achived = false;
@@ -219,8 +219,8 @@ public class Redis extends Storage {
 
 
 	@Override
-	protected Map<PageNodeId, NodeValue> getBackendFreq() {
-		for( PageNodeId temp : missing ) {
+	protected Map<NodeId, NodeValue> getBackendFreq() {
+		for( NodeId temp : missing ) {
 			addToBackendList( temp );
 		}
 		

@@ -5,6 +5,8 @@
 
 package com.doslocos.nutch.util;
 
+import java.util.Base64;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Node;
@@ -13,6 +15,9 @@ import org.jsoup.select.Elements;
 
 public class NodeUtil {
 
+	static public final Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
+	static public final Base64.Decoder decoder = Base64.getDecoder();
+	
 	public static String selectList =
 		"script,style,option,input, form,meta,input,select,appserver,button, comment,#comment,#text,noscript,server,timestamp,.hidden"
 	;

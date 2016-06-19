@@ -17,7 +17,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.doslocos.nutch.harvester.PageNodeId;
+import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.NodeValue;
 
 
@@ -145,7 +145,7 @@ public class Mariadb extends Storage {
 	}
 
 	@Override
-	public void addToBackendList( PageNodeId id ) {
+	public void addToBackendList( NodeId id ) {
 
 
 		try {			
@@ -188,7 +188,7 @@ public class Mariadb extends Storage {
 
 
 	@Override
-	public void incNodeFreq( PageNodeId id, NodeValue val ) {
+	public void incNodeFreq( NodeId id, NodeValue val ) {
 		//	LOG.debug( "incNodeFreq: id:" + id + " val:" + val );
 		if( null == val ) {
 			try {
@@ -265,9 +265,9 @@ public class Mariadb extends Storage {
 
 
 	@Override
-	protected Map<PageNodeId, NodeValue> getBackendFreq() {
+	protected Map<NodeId, NodeValue> getBackendFreq() {
 
-		HashMap< PageNodeId, NodeValue > readFreq = new HashMap< PageNodeId, NodeValue >( 1024 );
+		HashMap< NodeId, NodeValue > readFreq = new HashMap< NodeId, NodeValue >( 1024 );
 
 		if( missing.size() > 0 ) {
 
@@ -283,7 +283,7 @@ public class Mariadb extends Storage {
 
 			int i = 0;
 
-			for( PageNodeId temp : missing ) {			 
+			for( NodeId temp : missing ) {			 
 				nodeList += ",("+ temp.xpathId + "," + temp.hash + ")";
 				++i;
 
@@ -301,7 +301,7 @@ public class Mariadb extends Storage {
 	}
 
 
-	protected void readDB( String sql, Map<PageNodeId, NodeValue> map ) {
+	protected void readDB( String sql, Map<NodeId, NodeValue> map ) {
 
 		conn = checkConnection( conn );
 
@@ -313,7 +313,7 @@ public class Mariadb extends Storage {
 			while( rs.next() ) {
 				//++c;
 				int nid = rs.getInt( "node_id" );
-				PageNodeId pid = new PageNodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
+				NodeId pid = new NodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
 				int fq = rs.getInt( "fq" );
 
 				NodeValue val = new NodeValue( fq, nid);

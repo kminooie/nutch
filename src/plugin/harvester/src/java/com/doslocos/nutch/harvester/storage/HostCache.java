@@ -7,38 +7,38 @@ package com.doslocos.nutch.harvester.storage;
 
 import java.nio.ByteBuffer;
 
-import com.doslocos.nutch.harvester.PageNodeId;
+import com.doslocos.nutch.harvester.NodeId;
 
-public class NodeId {
+public class HostCache {
 
-	static public final int BYTES = Integer.BYTES + PageNodeId.BYTES;
+	static public final int BYTES = Integer.BYTES + NodeId.BYTES;
 	
 	
 	public int hostId;
-	public PageNodeId pageNodeId;
+	public NodeId pageNodeId;
 	
-	public NodeId( int hostId, int xpathId, int hash ) {
+	public HostCache( int hostId, int xpathId, int hash ) {
 		this.hostId = hostId;
-		pageNodeId = new PageNodeId( xpathId, hash );
+		pageNodeId = new NodeId( xpathId, hash );
 	}
 
 	
-	public NodeId( int hostId, PageNodeId pni ) {
+	public HostCache( int hostId, NodeId pni ) {
 		this.hostId = hostId;
 		this.pageNodeId = pni;
 	}
 
 	
-	public NodeId( NodeId hid ) {
+	public HostCache( HostCache hid ) {
 		this.hostId = hid.hostId;
 		this.pageNodeId = hid.pageNodeId;
 	}
 	
 	
-	public NodeId( byte b[] ) {
+	public HostCache( byte b[] ) {
 		ByteBuffer wrapped = ByteBuffer.wrap( b );
 		hostId = wrapped.getInt();
-		pageNodeId = new PageNodeId( 0, 0 );
+		pageNodeId = new NodeId( 0, 0 );
 		
 		pageNodeId.xpathId = wrapped.getInt();
 		pageNodeId.hash = wrapped.getInt();
@@ -46,7 +46,7 @@ public class NodeId {
 	
 	
 	public byte[] getBytes() {
-		return  ByteBuffer.allocate( NodeId.BYTES ).putInt( hostId ).put( pageNodeId.getBytes() ).array();
+		return  ByteBuffer.allocate( HostCache.BYTES ).putInt( hostId ).put( pageNodeId.getBytes() ).array();
 	}	
 
 	
@@ -58,7 +58,7 @@ public class NodeId {
 	
 	@Override
 	public boolean equals( Object obj ) {
-		NodeId rhs = ( NodeId ) obj;
+		HostCache rhs = ( HostCache ) obj;
 		return hostId == rhs.hostId && pageNodeId.equals( rhs.pageNodeId );
 	}
 	
@@ -70,10 +70,10 @@ public class NodeId {
 	
 	// test
 	static public void main( String args[] ) {
-		NodeId id = new NodeId( 25, -1362, 3223678 );
+		HostCache id = new HostCache( 25, -1362, 3223678 );
 		System.out.println( "node: " + id );
 		
-		NodeId id2 = new NodeId( id.getBytes() );
+		HostCache id2 = new HostCache( id.getBytes() );
 		System.out.println( "node2: " + id2 );
 		
 		if( id.hashCode() == id2.hashCode() ) {

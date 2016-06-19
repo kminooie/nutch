@@ -20,7 +20,7 @@ public class TrainingPart implements HtmlParseFilter{
 
 	public static final Logger LOG = LoggerFactory.getLogger(TrainingPart.class);
 	public static Configuration conf;
-	public static Harvester kbc;
+	public static Harvester harvester;
 	public static int freqCleanUp;
 	
 	public static int max =20000 ;
@@ -36,8 +36,9 @@ public class TrainingPart implements HtmlParseFilter{
 			String pathName = netUrl.getPath();
 			String hostName = netUrl.getHost();
 
-			kbc.learn( HTMLBody, hostName, pathName );
-			LOG.debug("learning part finish for : "+hostName+ pathName);
+			harvester.learn( HTMLBody, hostName, pathName );
+			LOG.debug("learning part finish for : " + hostName + pathName );
+			
 		} catch (MalformedURLException e) {
 			LOG.error("Error while training part in harvester plugin", e );
 		}
@@ -55,7 +56,7 @@ public class TrainingPart implements HtmlParseFilter{
 		if( null == TrainingPart.conf ) {
 			LOG.info( "local conf was null." );
 			TrainingPart.conf = conf;
-			kbc = new Harvester( conf );			
+			harvester = new Harvester( conf );
 		}
 	}
 
