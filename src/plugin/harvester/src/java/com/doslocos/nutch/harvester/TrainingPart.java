@@ -4,8 +4,6 @@ package com.doslocos.nutch.harvester;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.nutch.parse.HTMLMetaTags;
 import org.apache.nutch.parse.HtmlParseFilter;
@@ -49,25 +47,20 @@ public class TrainingPart implements HtmlParseFilter{
 
 
 		LOG.debug("harvester training part finished for : "+content.getUrl());
-
-		
-
-
 		return parseResult;
 	}
 
 	public void setConf(Configuration conf) {
+		LOG.info( "setConf of TrainingPart was called." );
 		if( null == TrainingPart.conf ) {
-						
+			LOG.info( "local conf was null." );
 			TrainingPart.conf = conf;
-			kbc = new Harvester( conf);
-			
-			
+			kbc = new Harvester( conf );			
 		}
 	}
 
 	public Configuration getConf() {
-
+		LOG.info( "getConf of TrainingPart was called." );
 
 		return TrainingPart.conf;
 	}

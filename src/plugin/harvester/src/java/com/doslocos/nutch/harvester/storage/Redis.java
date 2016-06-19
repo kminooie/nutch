@@ -143,7 +143,7 @@ public class Redis extends Storage {
 				byte nodeBytes[] = id.getBytes();
 				jedis.sadd( nodeBytes, pathIdBytes );
 				
-				jedis.sadd
+				// jedis.sadd
 				achived = true;
 			}catch(Exception e){
 
