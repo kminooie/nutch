@@ -56,7 +56,8 @@ public class TrainingPart implements HtmlParseFilter{
 		if( null == TrainingPart.conf ) {
 			LOG.info( "local conf was null." );
 			TrainingPart.conf = conf;
-			harvester = new Harvester( conf );
+			Harvester.setConf( conf );
+			harvester = new Harvester();
 		}
 	}
 

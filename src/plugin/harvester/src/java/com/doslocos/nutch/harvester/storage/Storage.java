@@ -6,15 +6,13 @@ import org.apache.hadoop.conf.Configuration;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Vector;
-import java.util.Iterator;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.doslocos.nutch.util.LRUCache;
 import com.doslocos.nutch.util.NodeUtil;
+import com.doslocos.nutch.harvester.Harvester;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.NodeValue;
 
@@ -33,16 +31,8 @@ public abstract class Storage {
 	static protected boolean readBackend = true;
 
 	static protected AtomicInteger pCounter = null;
-	static protected int cleanUpInterval = 0, frequency_threshould;
+	static protected int cleanUpInterval = 0;
 
-	//new stuff
-	static protected ConcurrentHashMap< Integer, LRUCache< NodeId, Set< Integer > > > mainCache 
-		= new ConcurrentHashMap< Integer, LRUCache< NodeId, Set< Integer > > >( 1024 );
-	
-	/**
-	 * would contain all the nodes for this object page ( host + path )
-	 */
-	public final LinkedHashMap< NodeId, NodeValue> currentPage = new LinkedHashMap< NodeId, NodeValue>( 4000, .9f );
 
 	public final Vector< NodeId > missing = new Vector< NodeId>( 2048 );
 
@@ -52,22 +42,17 @@ public abstract class Storage {
 
 	public Integer hostId = 0, pathId = 0;
 	
-	protected LRUCache< NodeId, Set< Integer > > hostCache; 
+	protected LRUCache< String, NodeId > hostCache; 
 
 	private int cacheHit = 0, cacheMissed = 0;
 
-	static synchronized public void set( Configuration conf ) {
+	static synchronized public void setConf( Configuration conf ) {
 
 		// prevent being set more than once
 		if( null != pCounter ) return;
 		
 		pCounter = new AtomicInteger();
 		
-		frequency_threshould =  conf.getInt( "doslocos.harvester.frequency_threshould" , 2  );
-		
-		int cacheSize = conf.getInt( "doslocos.harvester.cache.size" , 1000  );
-		float loadFactor = conf.getFloat( "doslocos.harvester.cache.loadfactor" , 0.8f );		
-		cacheThreshould =  conf.getInt( "doslocos.harvester.cache.threshold" , 100  );
 		
 		boolean cleanUpEnalbed = conf.getBoolean( "doslocos.harvester.storage.cleanup", false );
 		int rangeMin = conf.getInt( "doslocos.harvester.storage.cleanup.min", 1322 );
@@ -80,57 +65,9 @@ public abstract class Storage {
 			LOG.info( "Storage cleanup disabled." );
 		}
 
-		LOG.info( "Initilizing cache, size:" + cacheSize + ", loadFactor:" + loadFactor );
-		LOG.info( "Initilizing cache threshold : " +cacheThreshould );
-
-		if( cacheSize < 1000 ) {
-			cacheSize = 1000;
-			LOG.info( "over writing cahce size to " +  cacheSize );
-		}
-		
-		cache = new LRUCache< HostCache, NodeValue >( cacheSize, loadFactor );
 	}
 
 	
-	static public void pruneMainCache() {
-		for( Map.Entry< Integer, LRUCache< NodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
-			Integer hId = entry.getKey();
-			LRUCache< NodeId, Set< Integer > > hostCache = entry.getValue();
-			
-			LOG.info( "pruning hostId: " + hId + " with size " + hostCache.usedEntries() );
-			
-			// Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator();
-			Iterator< Map.Entry< NodeId, Set< Integer > > > itr = hostCache.entrySet().iterator();			
-			
-			
-			while( itr.hasNext() ) {
-				Map.Entry< NodeId, Set< Integer > > pageEntry = itr.next();
-				if( pageEntry.getValue().size() < frequency_threshould ) {
-					LOG.info( "removing node: " + pageEntry.getKey() + " with size:" + pageEntry.getValue().size() );
-					itr.remove();
-				}				
-				
-			}
-			
-			LOG.info( "size after pruning: " + hostCache.usedEntries() );
-		}
-	}	
-	
-
-	static public void dumpMainCache() {
-		for( Map.Entry< Integer, LRUCache< NodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
-			Integer hId = entry.getKey();
-			LRUCache< NodeId, Set< Integer > > hostCache = entry.getValue();
-			
-			LOG.info( "hostId: " + hId );
-			for( Iterator< Map.Entry< NodeId, Set< Integer > > > itr = hostCache.getAll().iterator(); itr.hasNext(); ) {
-				Map.Entry< NodeId, Set< Integer > > pageEntry = itr.next();
-				LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().size() );
-			}
-		}
-	}
-
-
 	public Storage( String host, String path ) {
 		this.host = host;
 		hostId = NodeUtil.stringToId( host );
@@ -143,18 +80,22 @@ public abstract class Storage {
 		this.path = path;
 		pathId = NodeUtil.stringToId( path );
 		
-		// new stuff		
-		synchronized( mainCache ) {
-			hostCache = mainCache.get( hostId );
-			if( null == hostCache ) {
-				mainCache.put( hostId, hostCache = new LRUCache< NodeId, Set< Integer > >( 4096, .9f ) );
-				LOG.info( "creating new hostCache for hostId:" + hostId );
-			}
-		}
+		loadHost( hostId );
 		
 	}
 
-
+	public void loadHost( Integer hostId ) {
+		synchronized( Harvester.mainCache ) {
+			hostCache = Harvester.mainCache.get( hostId );
+			if( null == hostCache ) {
+				Harvester.mainCache.put( hostId, hostCache = new LRUCache< String, NodeId >( 4096, .9f ) );
+				LOG.info( "creating new hostCache for hostId:" + hostId );
+				
+				
+			}
+		}
+	}
+	
 	public void addNodeToList( String xpath, int hash ) {
 		NodeId id = new NodeId( NodeUtil.stringToId( xpath ), hash );
 		HostCache nid = new HostCache( hostId, id );
@@ -219,7 +160,7 @@ public abstract class Storage {
 	public void learnEnd() {
 		if ( ( 0 != cleanUpInterval ) && ( 0 == pCounter.incrementAndGet() % cleanUpInterval ) ) {
 			LOG.info( "about to prune main cache. pCounter:" + pCounter );
-			pruneMainCache();				
+			Harvester.pruneMainCache();				
 		}
 		
 		if( 0 != cleanUpInterval ) {

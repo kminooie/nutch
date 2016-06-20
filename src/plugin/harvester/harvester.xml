@@ -4,35 +4,77 @@
 
 <!-- begin havester plugin -->
 <property>
- <name>doslocos.harvester.frequency_threshould</name>
- <value>2</value>
- <description>its the frequency that divided nodes as common nodes and unique nodes
- </description>
+	<name>doslocos.harvester.frequency.collect</name>
+	<value>2</value>
+	<description>minimum path frequency needed to survive a clean up.
+	 nodes with more paths are considered common
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.frequency.write</name>
+	<!- <value>2</value> -->
+	<default>doslocos.harvester.frequency.collect</default>
+	<description>minimum path frequency needed to be considered for storage
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.frequency.max</name>
+	<!- <value>2</value> -->
+	<default>doslocos.harvester.frequency.write</default>
+	<description>minimum path frequency needed to for node to stop counting paths
+	</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.frequency.gc</name>
+	<value>10</value>
+	<description>minimum path frequency needed before gc gets triggered
+	</description>
 </property>
 
 <!--
 <property>
- <name>doslocos.harvester.selector</name>
- <value>script,style,option,input,form,meta,input,select,appserver,button,comment,#comment,#text,noscript,server,timestamp,.hidden</value>
- <description>html node and ids and classes that would be ignored. refer to org.jsoup.Jsoup
+ <name>doslocos.harvester.remove_list</name>
+ <value>server,appserver,meta,link,timestamp,noscript,script,style,form,option,input,select,button,comment,#comment,#text,.hidden</value>
+ <description>html nodes and ids and classes that would be removed. refer to org.jsoup.Jsoup
  </description>
 </property>
 -->
 
-
 <property>
 	<name>doslocos.harvester.fieldname</name>
-	<value>rawcontent</value>
-	<description>it is the name of a field that you want to put new parsed text on it.
-	it must be set in solr schema too.
+	<value>harvested</value>
+	<description>name of a field that would be used to index filtered data.
+	this field should exist in the schema.
 	</description>
 </property>
 
 <property>
-	<name>doslocos.harvester.removefileds</name>
+	<name>doslocos.harvester.remove_fileds</name>
 	<value></value>
-	<description>the fields that you want to remove in Indexing part
+	<description>the fields that you want to remove entirely in Indexing part
 	</description>
+</property>
+
+
+<property>
+	<name>doslocos.harvester.cache.hosts_per_job</name>
+	<value>2048</value>
+	<description>upper average of number of hosts in a given fetch job</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.cache.nodes_per_page</name>
+	<value>4096</value>
+	<description>upper average of number of nodes in a given page</description>
+</property>
+
+<property>
+	<name>doslocos.harvester.cache.load_factor</name>
+	<value>0.95</value>
+	<description>cache load factor in float</description>
 </property>
 
 
@@ -45,28 +87,6 @@
  </description>
 </property>
 
-<property>
- <name>doslocos.harvester.cache.size</name>
- <value>0</value>
- <description>number of items ( nodes ) cache should hold. 0 would disable the cache  
- </description>
-</property>
-
-<property>
- <name>doslocos.harvester.cache.loadfactor</name>
- <value>0.8</value>
- <description>
- desired cache memory load factor  
- </description>
-</property>
-
-<property>
- <name>doslocos.harvester.cache.threshold</name>
- <value>100</value>
- <description>
- minimum frequency for a node to be cached 
- </description>
-</property>
 
 <property>
  <name>doslocos.harvester.storage.batchsize</name>

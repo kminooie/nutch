@@ -37,8 +37,9 @@ public class Mariadb extends Storage {
 	private int newNodes = 0;
 	private int newUrls = 0;
 
-	static public void set( Configuration conf ) {
-		Storage.set( conf );
+	@Override
+	static synchronized public void setConf( Configuration conf ) {
+		Storage.setConf( conf );
 
 		String DBHOST = conf.get("doslocos.harvester.mariadb.host", "localhost" );
 		String SCHEMA = conf.get("doslocos.harvester.mariadb.schema", "nutch_harvester_db" );
