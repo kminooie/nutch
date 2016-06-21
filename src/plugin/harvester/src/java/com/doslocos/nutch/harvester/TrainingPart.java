@@ -19,11 +19,14 @@ import org.slf4j.LoggerFactory;
 public class TrainingPart implements HtmlParseFilter{
 
 	public static final Logger LOG = LoggerFactory.getLogger(TrainingPart.class);
-	public static Configuration conf;
-	public static Harvester harvester;
-	public static int freqCleanUp;
+
+	public static Harvester harvester;	
+
+
+	public TrainingPart() {
+		harvester = new Harvester();
+	}
 	
-	public static int max =20000 ;
 	
 	@Override
 	public ParseResult filter(Content content, ParseResult parseResult, HTMLMetaTags metaTags, DocumentFragment doc) {
@@ -51,20 +54,18 @@ public class TrainingPart implements HtmlParseFilter{
 		return parseResult;
 	}
 
+
 	public void setConf(Configuration conf) {
-		LOG.info( "setConf of TrainingPart was called." );
-		if( null == TrainingPart.conf ) {
-			LOG.info( "local conf was null." );
-			TrainingPart.conf = conf;
-			Harvester.setConf( conf );
-			harvester = new Harvester();
+		LOG.debug( "setConf of TrainingPart was called." );
+		
+		if( Settings.setConf( conf ) ) {
+			LOG.info( "instantiating Harvester" );
+			harvester.init();
 		}
 	}
 
 	public Configuration getConf() {
-		LOG.info( "getConf of TrainingPart was called." );
-
-		return TrainingPart.conf;
+		return Settings.getConf();
 	}
 
 

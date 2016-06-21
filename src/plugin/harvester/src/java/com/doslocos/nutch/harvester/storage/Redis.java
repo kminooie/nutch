@@ -16,6 +16,7 @@ import com.doslocos.nutch.harvester.Harvester;
 import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.NodeValue;
+import com.doslocos.nutch.harvester.Settings;
 import com.doslocos.nutch.util.LRUCache;
 import com.doslocos.nutch.util.NodeUtil;
 
@@ -33,59 +34,31 @@ import redis.clients.jedis.ScanResult;
 public class Redis extends Storage {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Redis.class );
-	static public final String CONF_PREFIX = Harvester.CONF_PREFIX + "redis.";
-	static public int dbNumber, bucketSize;
 
 	static private JedisPool pool;
-	static private final JedisPoolConfig poolConfig = new JedisPoolConfig();
-	static private final ScanParams scanParams = new ScanParams();
 
-	
 	private Jedis jedis;
 	private byte[] pathIdBytes = new byte[ Integer.BYTES ];
 	
-	@Override
-	static public synchronized void setConf( Configuration conf ) {
-		Storage.setConf( conf );
+	
+	static public synchronized void init() {
+		Storage.init();
 		
-		LOG.debug( "Initilizing Redis storage." );
-		
-		String redisHost = conf.get( CONF_PREFIX + "host", "localhost" );
-		int redisPort = conf.getInt( CONF_PREFIX + "port", 6379 );
-		int redisDb = conf.getInt( CONF_PREFIX + "db", 15 );
-		int redisTimeOut = conf.getInt( CONF_PREFIX + "dbTimeOut", 0 );
-		LOG.debug( "host:" + redisHost + ":" + redisPort +" db:"+ redisDb + " timeout:" + redisTimeOut );
-		
-		boolean setTestOnBorrow = conf.getBoolean( CONF_PREFIX + "setTestOnBorrow", true );
-		boolean setTestOnReturn = conf.getBoolean( CONF_PREFIX + "setTestOnReturn", true );
-		boolean setTestWhileIdle = conf.getBoolean( CONF_PREFIX + "setTestWhileIdle", true );
-		int setMaxTotal = conf.getInt( CONF_PREFIX + "setMaxTotal", 32 );
-		int setMaxIdle = conf.getInt( CONF_PREFIX + "setMaxIdle", 8 );
-		LOG.debug( "Pool: onBorrow:" + setTestOnBorrow + "  onReturn:" + setTestOnReturn + " whileIdle:" + setTestWhileIdle );
-		LOG.debug( "Pool: MaxTotal:" + setMaxTotal + " MaxIdle:" + setMaxIdle );
-
-		//poolConfig = new JedisPoolConfig();
-		bucketSize = conf.getInt( CONF_PREFIX + "bucket_size", 1024 );
-		scanParams.count( bucketSize );
-
-		poolConfig.setTestOnBorrow( setTestOnBorrow );
-		poolConfig.setTestOnReturn( setTestOnReturn );
-		poolConfig.setTestWhileIdle( setTestWhileIdle);
-		poolConfig.setMaxTotal( setMaxTotal ); 
-		poolConfig.setMaxIdle( setMaxIdle );
-
-		pool = new JedisPool( poolConfig, redisHost, redisPort, redisTimeOut );	
-
+		if( null == pool ) {
+			LOG.info( "Initilizing Redis storage." );
+				
+			pool = new JedisPool( Settings.Storage.Redis.poolConfig, Settings.Storage.Redis.host, Settings.Storage.Redis.port, Settings.Storage.Redis.timeOut );	
+		}
 	}
 
 	static public Jedis getConnection() {
 		Jedis conn = null;
 		
 		try{			
+			LOG.info( "Getting a new connection." );
+			
 			conn = pool.getResource(); 
-			conn.select( dbNumber );
-				
-			LOG.debug( "Getting a new connection." );
+			conn.select( Settings.Storage.Redis.db );
 		}catch( Exception e ){
 			LOG.error( "while getting the connection:", e );
 		}
@@ -96,7 +69,7 @@ public class Redis extends Storage {
 	
  	public Redis( String host, String path ) {
 		super( host, path );
-		ByteBuffer.wrap( pathIdBytes ).putInt( pathId );
+		ByteBuffer.wrap( pathIdBytes ).putInt( pathHash );
 		initConnection();
 	}
 
@@ -122,7 +95,7 @@ public class Redis extends Storage {
 		String cursor = "0";
 		
 		while( loop ) {
-			ScanResult<String> scanResult = jedis.sscan( hostCache.getKey(), cursor, scanParams );
+			ScanResult<String> scanResult = jedis.sscan( hostCache.getKey(), cursor, Settings.Storage.Redis.scanParams );
 			cursor = scanResult.getStringCursor();
 			
 			List<String> list = scanResult.getResult();
@@ -149,6 +122,7 @@ public class Redis extends Storage {
 	}
 	
 	
+	@Override
 	public void saveHostInfo( HostCache hostCache ) { 
 		Pipeline p = getConnection().pipelined();
 		
@@ -162,7 +136,7 @@ public class Redis extends Storage {
 			for( Map.Entry< String, NodeId > entry : hostCache.nodes.entrySet() ) {
 				int thisPathsSize = entry.getValue().paths.size(); 
 				
-				if( thisPathsSize > Harvester.ft_write ) {
+				if( thisPathsSize > Settings.FThreshold.write ) {
 					p.sadd( entry.getKey() + ":" + hostCache.getKey(), entry.getValue().paths.toArray( new String[0] ) );
 				
 					numOfWrite += thisPathsSize;
@@ -171,11 +145,13 @@ public class Redis extends Storage {
 					entry.getValue().paths.clear();				 
 				}
 				
-				if( numOfWrite > bucketSize ) {
-					numOfWrite -= bucketSize;
+				if( numOfWrite > Settings.Storage.Redis.bucketSize ) {
+					numOfWrite -= Settings.Storage.Redis.bucketSize;
 					p.sync();			
 				}
 			}
+			
+			hostCache.needSave = false;
 		}
 		
 		p.sync();

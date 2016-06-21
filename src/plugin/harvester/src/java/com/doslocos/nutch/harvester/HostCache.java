@@ -24,11 +24,13 @@ public class HostCache {
 	public int hostId;
 	public String key;
 	
+	public boolean needPrune = false, needSave = false;
+	
 	public LRUCache< String, NodeId > nodes;
 
 	
 	private HostCache() {
-		nodes = new LRUCache< String, NodeId > ( Harvester.cache_nodes_per_page, Harvester.cache_load_factor );
+		nodes = new LRUCache< String, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 	
 	public HostCache( int hostId ) {
@@ -68,12 +70,13 @@ public class HostCache {
 				Map.Entry< String, NodeId > entry = itr.next();
 				NodeId node = entry.getValue();
 				
-				if( node.paths.size() <= Harvester.ft_collect ) {
+				if( Settings.FThreshold.collect < node.paths.size() ) {
 					LOG.info( "removing node: " + entry.getKey() + " with size:" + node.paths.size() + " num of saved paths:" + node.numSavedPath );
 			
 					itr.remove();
 				}
 			}
+			needPrune = false;
 		}
 		
 		LOG.info( "size after pruning: " + nodes.size() );

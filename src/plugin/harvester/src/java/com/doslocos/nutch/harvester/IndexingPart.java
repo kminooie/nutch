@@ -59,7 +59,7 @@ public class IndexingPart implements IndexingFilter {
 
 
 	public void setConf(Configuration conf) {
-		harvester = new Harvester( conf );
+		harvester = new Harvester();
 
 		newFieldName =  conf.get( "doslocos.harvester.fieldname" , newFieldName );
 		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );

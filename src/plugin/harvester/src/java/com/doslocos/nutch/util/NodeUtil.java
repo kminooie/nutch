@@ -14,6 +14,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 
 import com.doslocos.nutch.harvester.NodeId;
+import com.doslocos.nutch.harvester.Settings;
 
 
 public class NodeUtil {
@@ -21,13 +22,13 @@ public class NodeUtil {
 	static public final Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
 	static public final Base64.Decoder decoder = Base64.getDecoder();
 	
-	public static String removeList =
-		"server,appserver,meta,link,timestamp,noscript,script,style,form,option,input,select,button,comment,#comment,#text,.hidden"
-	;
+//	public static String removeList =
+//		"server,appserver,meta,link,timestamp,noscript,script,style,form,option,input,select,button,comment,#comment,#text,.hidden"
+//	;
 	
 	public static Node parseDom( String page_content ) {
 		Document doc = Jsoup.parse( page_content );
-		doc.select( removeList ).remove();
+		doc.select( Settings.NodeUtil.removeList ).remove();
 		Elements e = doc.getElementsByTag( "body" );
 		return e.get( 0 );
 	}

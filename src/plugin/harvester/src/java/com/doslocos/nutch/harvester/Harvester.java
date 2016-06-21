@@ -23,23 +23,22 @@ public class Harvester {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Harvester.class );
 	
-	
-	public Harvester() {
-		
+	static private Class<?> connClass;
+
+
+	public void init() {
+		try {
+			connClass = Class.forName( Settings.Storage.connClassName );
+
+			Method init = connClass.getMethod( "init" );
+			init.invoke( null  );
+
+		} catch( Exception e ) {
+			LOG.error( "Got exception while calling init: ", e );
+			// die();
+		}
 	}
 	
-	public Harvester( Configuration conf ){
-
-		if( null == connClassName ) setConf( conf );		
-	}
-
-
-	static public void die() {
-		// TODO: find out how to kill a mapreduce job
-		System.exit( 1 );
-	}
-
-
 	public boolean learn( String HTMLBody, String host, String path ) {
 
 		Map<NodeId, NodeValue > map = null;
@@ -59,8 +58,6 @@ public class Harvester {
 
 		try {
 			
-
-
 			readAllNodes( storage, pageNode, "html/body" );			
 			map = storage.getAllFreq();
 
@@ -112,7 +109,6 @@ public class Harvester {
 			storage = (Storage) connClass.getConstructor( String.class, String.class ).newInstance( host, path );
 		} catch( Exception e ) {
 			LOG.error( "Failed to instanciate storage: ", e );
-			die();
 		}
 
 		return storage;
@@ -197,28 +193,6 @@ public class Harvester {
 	}
 
 
-	static public void pruneMainCache() {
-		for( Map.Entry< Integer, HostCache > entry: Storage.mainCache.entrySet() ) {
-			Integer hId = entry.getKey();
-			HostCache hostCache = entry.getValue();
-			
-			Storage.LOG.info( "pruning hostId: " + hId + " with size " + hostCache.nodes.size() );
-			
-			// Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator();
-			Iterator< Map.Entry< String, NodeId > > itr = hostCache.nodes.entrySet().iterator();			
-			
-			
-			while( itr.hasNext() ) {
-				Map.Entry< String, NodeId > pageEntry = itr.next();
-				if( pageEntry.getValue().paths.size() < ft_collect ) {
-					Storage.LOG.info( "removing node: " + pageEntry.getKey() + " with size:" + pageEntry.getValue().size() );
-					itr.remove();
-				}				
-				
-			}
-			
-			Storage.LOG.info( "size after pruning: " + hostCache.usedEntries() );
-		}
-	}
+	
 
 }

@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.NodeValue;
+import com.doslocos.nutch.harvester.Settings;
 
 
 public class Mariadb extends Storage {
@@ -27,9 +28,6 @@ public class Mariadb extends Storage {
 
 	static private BasicDataSource poolDS;
 
-	static private int readBSize;
-	static private int writeBSize;
-
 	private Connection conn = null;
 	private PreparedStatement  psNode, psFrequency;
 	private ResultSet tempRs = null;
@@ -37,34 +35,19 @@ public class Mariadb extends Storage {
 	private int newNodes = 0;
 	private int newUrls = 0;
 
-	@Override
-	static synchronized public void setConf( Configuration conf ) {
-		Storage.setConf( conf );
+	
+	static public void init() {
+		Storage.init();
 
-		String DBHOST = conf.get("doslocos.harvester.mariadb.host", "localhost" );
-		String SCHEMA = conf.get("doslocos.harvester.mariadb.schema", "nutch_harvester_db" );
-		String USER = conf.get("doslocos.harvester.mariadb.username", "root" );
-		String PASS = conf.get("doslocos.harvester.mariadb.password", "" );
-
-		int maxTotal = conf.getInt("doslocos.harvester.mariadb.poolMaxTotal", 8 );
-		int maxIdle = conf.getInt("doslocos.harvester.mariadb.poolMaxIdle", 2 );
-
-		readBSize = conf.getInt("doslocos.harvester.mariadb.readBatchSize", 500 );
-		writeBSize = conf.getInt("doslocos.harvester.mariadb.writeBatchSize", 2000 );
-
-
-		LOG.info( "storage url: jdbc:mysql://"+DBHOST+"/"+SCHEMA+" with user: " + USER );
-		LOG.info( "poolMaxTotal: " + maxTotal + " poolMaxIdle: " + maxIdle );
-		LOG.info( "readBatchSize: " + readBSize + " writeBatchSize: " + writeBSize );
-
+		
 		poolDS = new BasicDataSource();
 
 		poolDS.setDriverClassName( "org.mariadb.jdbc.Driver" );
-		poolDS.setUrl( "jdbc:mysql://"+DBHOST+"/"+SCHEMA+"?rewriteBatchedStatements=true" );
-		poolDS.setUsername( USER );
-		poolDS.setPassword( PASS );
-		poolDS.setMaxTotal( maxTotal );
-		poolDS.setMaxIdle( maxIdle );
+		poolDS.setUrl( "jdbc:mysql://" + Settings.Storage.Mariadb.DBHOST + "/" + Settings.Storage.Mariadb.SCHEMA + "?rewriteBatchedStatements=true" );
+		poolDS.setUsername( Settings.Storage.Mariadb.USER );
+		poolDS.setPassword( Settings.Storage.Mariadb.PASS );
+		poolDS.setMaxTotal( Settings.Storage.Mariadb.poolMaxTotal );
+		poolDS.setMaxIdle( Settings.Storage.Mariadb.poolMaxIdle );
 
 		try {
 			Connection conn = checkConnection( null );
@@ -208,7 +191,7 @@ public class Mariadb extends Storage {
 		} else {
 			try {
 				psFrequency.setInt( 1, val.dbId );
-				psFrequency.setInt( 2, pathId );
+				psFrequency.setInt( 2, pathHash );
 
 				psFrequency.addBatch();
 
@@ -239,7 +222,7 @@ public class Mariadb extends Storage {
 				tempRs.next();
 
 				psFrequency.setLong( 1, tempRs.getLong(1));
-				psFrequency.setInt( 2, pathId );			
+				psFrequency.setInt( 2, pathHash );			
 
 				psFrequency.addBatch();
 
@@ -274,7 +257,7 @@ public class Mariadb extends Storage {
 
 			String sqlPrefix = "SELECT n.id  node_id, n.xpath_id xpath_id, n.hash hash, fq"  
 					+ " FROM nodes n"
-					+ " JOIN urls u ON( n.id =  u.node_id AND u.url_id = " + pathId + " ) "
+					+ " JOIN urls u ON( n.id =  u.node_id AND u.url_id = " + pathHash + " ) "
 					+ " JOIN frequency f ON( n.id = f.node_id )"
 					+ " WHERE n.host_id = " + hostId + " AND ( n.xpath_id, n.hash ) IN ("
 
