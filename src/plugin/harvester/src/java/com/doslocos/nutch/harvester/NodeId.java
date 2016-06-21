@@ -7,37 +7,55 @@ package com.doslocos.nutch.harvester;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.mortbay.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 
+import com.doslocos.nutch.harvester.storage.Storage;
+import com.doslocos.nutch.util.LRUCache;
 import com.doslocos.nutch.util.NodeUtil;
 
 public class NodeId {
 
+	static public final Logger LOG = LoggerFactory.getLogger( NodeId.class );
 	static public final int BYTES = 2 * Integer.BYTES;
-	static public int MAX_NUM_PATHS = 128;
+	static public final int NUM_PATHS = 128;
 	
-	public int xpathId;
-	public int hash;
+	public int xpathId, hash;
+	public String key; 
 	
-	public final List<Integer> paths = Collections.synchronizedList( new ArrayList<Integer>( NodeId.MAX_NUM_PATHS ) );
-	public volatile int numberOfPaths = 0;
+	public final List<String> paths = Collections.synchronizedList( new ArrayList<String>( NUM_PATHS ) );
+	public Long numSavedPath = 0L;
 	
+	static public String makeKey( String nodeXpath, int nodeHash ) {
+		return NodeUtil.encoder.encodeToString( makeBytes( nodeXpath, nodeHash) );
+	}
+	
+	static public byte[] makeBytes( String nodeXpath, int nodeHash ) {
+		return ByteBuffer.allocate( NodeId.BYTES ).putInt( nodeXpath.hashCode() ).putInt( nodeHash ).array();
+	}
 	
 	public NodeId( int xpathId, int hash ) {
 		this.xpathId = xpathId;
 		this.hash = hash;
+		this.key = NodeUtil.encoder.encodeToString( getBytes() );
 	}
 
 	public NodeId( String xpath, int hash ) {
-		this.xpathId = NodeUtil.stringToId( xpath );
-		this.hash = hash;
+		this( NodeUtil.stringToId( xpath ), hash );;
 	}
 	
 	public NodeId( NodeId id ) {
 		xpathId = id.xpathId;
 		hash = id.hash;
-		numberOfPaths = id.numberOfPaths;
+		numSavedPath = id.numSavedPath;
 		synchronized ( id.paths ) {
 			paths.addAll( id.paths );
 		}		
@@ -46,11 +64,18 @@ public class NodeId {
 	public NodeId( byte b[] ) {
 		ByteBuffer wrapped = ByteBuffer.wrap( b );
 		xpathId = wrapped.getInt();
-		hash = wrapped.getInt();		
+		hash = wrapped.getInt();
+		key = NodeUtil.encoder.encodeToString( wrapped.array() );
 	}
 	
 	public NodeId( String key ) {
 		this( NodeUtil.decoder.decode( key ) );
+		
+		if( this.key.equals( key ) ) {
+			LOG.info( "sanity passes." );
+		} else {
+			LOG.error( "sanity failes." );
+		}
 	}
 
 	
@@ -59,15 +84,19 @@ public class NodeId {
 	}
 	
 	public String getKey() {
-		return NodeUtil.encoder.encodeToString( getBytes() );
+		return key;
 	}
 
 	public boolean addPath( Integer pathId ) {
-		++numberOfPaths;
+		boolean result = false;
 		
-		return paths.add( pathId );
+		if( ( numSavedPath + paths.size() ) < Harvester.ft_max ) {
+			result =  paths.add( NodeUtil.intToBase64( pathId ) );
+		}
+
+		return result;
 	}
- 
+
 	
 	@Override
 	public int hashCode() {

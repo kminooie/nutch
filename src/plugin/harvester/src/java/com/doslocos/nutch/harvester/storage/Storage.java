@@ -7,12 +7,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Vector;
-import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.doslocos.nutch.util.LRUCache;
 import com.doslocos.nutch.util.NodeUtil;
 import com.doslocos.nutch.harvester.Harvester;
+import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.NodeValue;
 
@@ -46,7 +47,11 @@ public abstract class Storage {
 
 	private int cacheHit = 0, cacheMissed = 0;
 
-	static synchronized public void setConf( Configuration conf ) {
+	//new stuff
+	// static public ConcurrentHashMap< Integer, LRUCache< String, NodeId> > mainCache;
+	static public ConcurrentHashMap< Integer, HostCache > mainCache;
+
+	static public synchronized void setConf( Configuration conf ) {
 
 		// prevent being set more than once
 		if( null != pCounter ) return;
@@ -84,72 +89,17 @@ public abstract class Storage {
 		
 	}
 
-	public void loadHost( Integer hostId ) {
-		synchronized( Harvester.mainCache ) {
-			hostCache = Harvester.mainCache.get( hostId );
+	public HostCache loadHost( Integer hostId ) {
+		HostCache hostCache = null;
+		synchronized( Storage.mainCache ) {
+			hostCache = Storage.mainCache.get( hostId );
 			if( null == hostCache ) {
-				Harvester.mainCache.put( hostId, hostCache = new LRUCache< String, NodeId >( 4096, .9f ) );
-				LOG.info( "creating new hostCache for hostId:" + hostId );
-				
-				
+				hostCache = loadHostInfo( new HostCache( hostId ) );
+				Storage.mainCache.put( hostId, hostCache );
+				LOG.info( "Loaded host: " + hostCache );
 			}
 		}
-	}
-	
-	public void addNodeToList( String xpath, int hash ) {
-		NodeId id = new NodeId( NodeUtil.stringToId( xpath ), hash );
-		HostCache nid = new HostCache( hostId, id );
-		NodeValue val = cache.get( nid );
-
-		if( null == val ) {
-			++cacheMissed;
-
-			missing.add( id );
-		} else {
-			++cacheHit;
-			currentPage.put( id, val );
-		}
-		
-		// new stuff
-		Set<Integer> nodeSet = hostCache.get( id );
-		
-		if( null == nodeSet ) {
-			hostCache.put(id, nodeSet = Collections.synchronizedSet( new HashSet<Integer>( 2048, .8f ) ) );
-			// LOG.info( "allocating new set for pageNodeId:" + id );
-		}
-		
-		nodeSet.add( pathId );
-		
-	}
-	
-		
-		
-	public Map<NodeId, NodeValue> getAllFreq() {
-		LOG.debug( "page cache size:" + currentPage.size() );
-		Map<NodeId, NodeValue> backendData = getBackendFreq();
-		LOG.debug( "number of items read from backend:" + backendData.size() );
-		
-		for( Map.Entry< NodeId, NodeValue > e:backendData.entrySet() ) {
-			NodeValue val = e.getValue();
-			
-			if( null == val ) {
-				LOG.error( "value is null. key:" + e.getKey() );
-			}
-
-			if( val.frequency > cacheThreshould ) {
-	    		cache.put( new HostCache( hostId, e.getKey() ), val );
-	    	}
-			
-			currentPage.put( e.getKey(),val );
-		}
-		
-		
-		
-		LOG.info( "page cache size:" + currentPage.size() );
-		LOG.info( "hit:" + cacheHit + " missed:" + cacheMissed );
-		
-		// dumpMainCache();
-		return currentPage;
+		return hostCache;
 	}
 
 
@@ -187,10 +137,6 @@ public abstract class Storage {
 		LOG.info( "Storage finalize was called." );
 	}
 	
-	public abstract void incNodeFreq( NodeId id, NodeValue val );
-
-	protected abstract void addToBackendList( NodeId id );
-	protected abstract Map< NodeId, NodeValue > getBackendFreq();
+	public abstract HostCache loadHostInfo( HostCache hostCache );
 	
-	protected abstract boolean cleanUpDb( Set<Integer> hostIds ) ;
 }

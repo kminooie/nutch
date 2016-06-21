@@ -102,6 +102,15 @@ public class LRUCache<K,V> {
 		return new ArrayList<Map.Entry<K,V>>(map.entrySet());
 	}
 
+	
+	public synchronized Set<K> keySet() {
+		return map.keySet();
+	}
+	
+	public synchronized int size() {
+		return map.size();
+	}
+	
 	public synchronized Set<Entry<K, V>> entrySet() {
 		return map.entrySet();
 	}

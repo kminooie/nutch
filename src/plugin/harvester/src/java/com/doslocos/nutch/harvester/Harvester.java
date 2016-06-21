@@ -22,93 +22,7 @@ import org.slf4j.LoggerFactory;
 public class Harvester {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Harvester.class );
-	static public final String CONF_PREFIX = "doslocos.harvester.";
-
-	//new stuff
-	static public ConcurrentHashMap< Integer, LRUCache< String, NodeId> > mainCache;
-
-	/**
-	 * @var int ft_* various frequency thresholds
-	 */
-	static private int ft_collect, ft_write, ft_max, ft_gc ;
 	
-	/**
-	 * @var int cache_* various cache tuning
-	 */
-	static private int cache_hosts_per_job ,cache_nodes_per_page;
-	static private float cache_load_factor;
-	
-	static private String connClassName = null;
-	static private Class<?> connClass;
-
-	/**
-	 * would contain all the nodes for this object page ( host + path )
-	 */
-	public final LinkedHashMap< NodeId, NodeValue> currentPage = new LinkedHashMap< NodeId, NodeValue>( 4000, .9f );
-
-	static synchronized public void setConf( Configuration conf ) {
-		if( null == connClassName ) {
-			String prefix = CONF_PREFIX;
-
-			// parser settings
-			NodeUtil.removeList = conf.get( prefix + "remove_list", NodeUtil.removeList );
-			LOG.info( "selectList: " + NodeUtil.removeList );
-
-
-			// frequency settings
-			prefix += "frequency.";
-			
-			ft_collect =  conf.getInt( prefix + "collect" , 2  );
-			LOG.info( "collect frequency threshold: " + ft_collect );
-
-			ft_write =  conf.getInt( prefix + "write" , ft_collect  );
-			LOG.info( "write frequency threshold: " + ft_write );
-
-			ft_max =  conf.getInt( prefix + "max" , ft_write  );
-			LOG.info( "max frequency threshold: " + ft_max );
-
-			ft_gc =  conf.getInt( prefix + "gc" , 10  );
-			LOG.info( "gc frequency threshold: " + ft_gc );
-
-
-			// cache settings
-			prefix = CONF_PREFIX + "cache.";
-			cache_nodes_per_page = conf.getInt( prefix + "hosts_per_job", 2048 );
-			LOG.info( "cache_nodes_per_page: " + cache_hosts_per_job );
-			
-			cache_nodes_per_page = conf.getInt( prefix + "nodes_per_page", 4096 );
-			LOG.info( "cache_nodes_per_page: " + cache_nodes_per_page );
-
-			cache_load_factor = conf.getFloat( prefix + "load_factor", 0.95f );
-			LOG.info( "cache_load_factor: " + cache_load_factor );
-
-			mainCache = new ConcurrentHashMap< Integer, LRUCache< String, NodeId > >( cache_hosts_per_job );
-
-			// storage settings
-			if( null != ( connClassName = conf.get( CONF_PREFIX + "storage.class", null ) ) ) {
-				try {
-					LOG.info( "storage class: " + connClassName );
-					connClass = Class.forName( connClassName );
-
-					Method setConf = connClass.getMethod( "setConf", Configuration.class );
-					setConf.invoke( null, conf );
-
-				} catch( Exception e ) {
-					LOG.error( "Got exception while setting storage class: ", e );
-					die();
-				}
-			} else {
-				LOG.error( "storage class ( " + CONF_PREFIX + "storage.class ) is not set. this property is mandatory." );
-				LOG.error( "available options are:" );
-				LOG.error( "com.doslocos.nutch.harvester.storage.Mariadb" );
-				LOG.error( "com.doslocos.nutch.harvester.storage.Redis" );
-
-				die();
-			}
-		} else {
-			LOG.error( "should not be here" );
-		}
-	}
 	
 	public Harvester() {
 		
@@ -129,8 +43,12 @@ public class Harvester {
 	public boolean learn( String HTMLBody, String host, String path ) {
 
 		Map<NodeId, NodeValue > map = null;
+		
 		boolean result = false;
 		Node pageNode = null;
+		Storage storage = getStorage( host, path );
+		
+		HostCache hostCache = storage.loadHost( storage.hostId );
 
 		try{
 			pageNode = NodeUtil.parseDom( HTMLBody );
@@ -140,7 +58,7 @@ public class Harvester {
 		}
 
 		try {
-			Storage storage = getStorage( host, path );
+			
 
 
 			readAllNodes( storage, pageNode, "html/body" );			
@@ -202,9 +120,14 @@ public class Harvester {
 
 
 
-	private void readAllNodes( Storage k, Node node, String xpath ) {
+	private void readAllNodes( Storage s, Node node, String xpath ) {
 		Integer hash = node.hashCode();
 
+		NodeId n = .nodes.get( NodeId.makeKey( xpath, hash ) );
+		if( null == n ) {
+			n = new NodeId( xpath, hash );
+			n.addPath(pathId)
+		}
 		k.addNodeToList( xpath, hash );
 		for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 			readAllNodes( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
@@ -261,33 +184,33 @@ public class Harvester {
 
 
 	static public void dumpMainCache() {
-		for( Map.Entry< Integer, LRUCache< String, NodeId > > entry: mainCache.entrySet() ) {
+		for( Map.Entry< Integer, HostCache > entry: Storage.mainCache.entrySet() ) {
 			Integer hId = entry.getKey();
-			LRUCache< String, NodeId > hostCache = entry.getValue();
+			HostCache hostCache = entry.getValue();
 			
-			Storage.LOG.info( "hostId: " + hId );
-			for( Iterator< Map.Entry< NodeId, Set< Integer > > > itr = hostCache.getAll().iterator(); itr.hasNext(); ) {
-				Map.Entry< NodeId, Set< Integer > > pageEntry = itr.next();
-				Storage.LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().size() );
+			LOG.info( "hostId: " + hId );
+			for( Iterator< Map.Entry< String, NodeId > > itr = hostCache.nodes.entrySet().iterator(); itr.hasNext(); ) {
+				Map.Entry< String, NodeId > pageEntry = itr.next();
+				LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().paths.size() );
 			}
 		}
 	}
 
 
 	static public void pruneMainCache() {
-		for( Map.Entry< Integer, LRUCache< NodeId, Set< Integer > > > entry: mainCache.entrySet() ) {
+		for( Map.Entry< Integer, HostCache > entry: Storage.mainCache.entrySet() ) {
 			Integer hId = entry.getKey();
-			LRUCache< NodeId, Set< Integer > > hostCache = entry.getValue();
+			HostCache hostCache = entry.getValue();
 			
-			Storage.LOG.info( "pruning hostId: " + hId + " with size " + hostCache.usedEntries() );
+			Storage.LOG.info( "pruning hostId: " + hId + " with size " + hostCache.nodes.size() );
 			
 			// Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator();
-			Iterator< Map.Entry< NodeId, Set< Integer > > > itr = hostCache.entrySet().iterator();			
+			Iterator< Map.Entry< String, NodeId > > itr = hostCache.nodes.entrySet().iterator();			
 			
 			
 			while( itr.hasNext() ) {
-				Map.Entry< NodeId, Set< Integer > > pageEntry = itr.next();
-				if( pageEntry.getValue().size() < ft_collect ) {
+				Map.Entry< String, NodeId > pageEntry = itr.next();
+				if( pageEntry.getValue().paths.size() < ft_collect ) {
 					Storage.LOG.info( "removing node: " + pageEntry.getKey() + " with size:" + pageEntry.getValue().size() );
 					itr.remove();
 				}				

@@ -5,12 +5,15 @@
 
 package com.doslocos.nutch.util;
 
+import java.nio.ByteBuffer;
 import java.util.Base64;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
+
+import com.doslocos.nutch.harvester.NodeId;
 
 
 public class NodeUtil {
@@ -62,6 +65,14 @@ public class NodeUtil {
 
 	static public int stringToId( String str ) {
 		return str.hashCode();
+	}
+	
+	static public String stringToBase64( String str ) {
+		return intToBase64( str.hashCode() );
+	}
+	
+	static public String intToBase64( Integer id ) {
+		return encoder.encodeToString( ByteBuffer.allocate( Integer.BYTES ).putInt( id ).array() );
 	}
 
 }

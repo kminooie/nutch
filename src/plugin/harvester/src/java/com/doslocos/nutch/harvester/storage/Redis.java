@@ -6,12 +6,14 @@ import java.util.Set;
 import java.util.List;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-  
+import java.util.LinkedHashMap;  
 
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.doslocos.nutch.harvester.Harvester;
+import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.NodeValue;
 import com.doslocos.nutch.util.LRUCache;
@@ -30,43 +32,41 @@ import redis.clients.jedis.ScanResult;
 
 public class Redis extends Storage {
 
-
 	static public final Logger LOG = LoggerFactory.getLogger( Redis.class );
+	static public final String CONF_PREFIX = Harvester.CONF_PREFIX + "redis.";
+	static public int dbNumber, bucketSize;
 
-	static private int dbNumber;
 	static private JedisPool pool;
 	static private final JedisPoolConfig poolConfig = new JedisPoolConfig();
-	
 	static private final ScanParams scanParams = new ScanParams();
 
-	public final Map< NodeId, NodeValue > read = new HashMap< NodeId, NodeValue >( 1024 );
 	
 	private Jedis jedis;
 	private byte[] pathIdBytes = new byte[ Integer.BYTES ];
 	
 	@Override
-	static synchronized public void setConf( Configuration conf ) {
+	static public synchronized void setConf( Configuration conf ) {
 		Storage.setConf( conf );
 		
 		LOG.debug( "Initilizing Redis storage." );
 		
-		String redisHost = conf.get( "doslocos.harvester.redis.host", "localhost" );
-		int redisPort = conf.getInt( "doslocos.harvester.redis.port", 6379 );
-		int redisDb = conf.getInt( "doslocos.harvester.redis.db", 15 );
-		int redisTimeOut = conf.getInt( "doslocos.harvester.redis.dbTimeOut", 0 );
+		String redisHost = conf.get( CONF_PREFIX + "host", "localhost" );
+		int redisPort = conf.getInt( CONF_PREFIX + "port", 6379 );
+		int redisDb = conf.getInt( CONF_PREFIX + "db", 15 );
+		int redisTimeOut = conf.getInt( CONF_PREFIX + "dbTimeOut", 0 );
 		LOG.debug( "host:" + redisHost + ":" + redisPort +" db:"+ redisDb + " timeout:" + redisTimeOut );
 		
-		boolean setTestOnBorrow = conf.getBoolean( "doslocos.harvester.redis.setTestOnBorrow", true );
-		boolean setTestOnReturn = conf.getBoolean( "doslocos.harvester.redis.setTestOnReturn", true );
-		boolean setTestWhileIdle = conf.getBoolean( "doslocos.harvester.redis.setTestWhileIdle", true );
-		int setMaxTotal = conf.getInt( "doslocos.harvester.redis.setMaxTotal",128);
-		int setMaxIdle = conf.getInt( "doslocos.harvester.redis.setMaxIdle",128);
+		boolean setTestOnBorrow = conf.getBoolean( CONF_PREFIX + "setTestOnBorrow", true );
+		boolean setTestOnReturn = conf.getBoolean( CONF_PREFIX + "setTestOnReturn", true );
+		boolean setTestWhileIdle = conf.getBoolean( CONF_PREFIX + "setTestWhileIdle", true );
+		int setMaxTotal = conf.getInt( CONF_PREFIX + "setMaxTotal", 32 );
+		int setMaxIdle = conf.getInt( CONF_PREFIX + "setMaxIdle", 8 );
 		LOG.debug( "Pool: onBorrow:" + setTestOnBorrow + "  onReturn:" + setTestOnReturn + " whileIdle:" + setTestWhileIdle );
 		LOG.debug( "Pool: MaxTotal:" + setMaxTotal + " MaxIdle:" + setMaxIdle );
 
 		//poolConfig = new JedisPoolConfig();
-		
-		scanParams.count( 1024 );
+		bucketSize = conf.getInt( CONF_PREFIX + "bucket_size", 1024 );
+		scanParams.count( bucketSize );
 
 		poolConfig.setTestOnBorrow( setTestOnBorrow );
 		poolConfig.setTestOnReturn( setTestOnReturn );
@@ -113,133 +113,76 @@ public class Redis extends Storage {
 		return result;
 	}
 	
-	
-	public void saveNode( NodeId pid, Set<Integer> paths ) {
-		int achived = 3;
-		int size = paths.size();
-		
-		
-		byte pathBytes[][] = new byte[size][ Integer.BYTES ];
-		
-		for( Integer id : paths ) {
-			ByteBuffer.wrap( pathBytes[ --size ] ).putInt( id );
-		}
-		
-		while( 0 != achived ) {
-			try{
-				--achived;
-				jedis.sadd( ( new HostCache( hostId, pid ) ).getBytes(), pathBytes );
-				
-				break;
-			}catch(Exception e){
 
-				LOG.error("Exception while saving node:" + pid + " attempt(s) left:" + achived, e );				
-				initConnection();
+	@Override
+	public HostCache loadHostInfo( HostCache hostCache ) {
+		Jedis jedis = getConnection();		
 				
-			}
-		}
-		
-		if( 0 == achived ) {
-			LOG.error( "Could not save node:" + pid + ", skiping it." );
-		}
-		
-	}
-	
-	
-	public LRUCache< String, NodeId > loadHostInfo( Integer hid, LRUCache< String, NodeId > hostCache ) {
-		Jedis jedis = getConnection();
-		
-		String hostKey = NodeUtil.encoder.encodeToString(  ByteBuffer.allocate( Integer.BYTES ).putInt( hid ).array() ) + ":H";
 		boolean loop = true;
 		String cursor = "0";
 		
 		while( loop ) {
-			ScanResult<String> scanResult = jedis.sscan( hostKey, cursor, scanParams );
+			ScanResult<String> scanResult = jedis.sscan( hostCache.getKey(), cursor, scanParams );
 			cursor = scanResult.getStringCursor();
 			
 			List<String> list = scanResult.getResult();
-			List< Response< Long > > sizes = new ListArray< Response< Long > >( list.size() );
+			LinkedHashMap< String, Response< Long > > nodes = new LinkedHashMap< String, Response< Long > >( list.size() );
 			
-			if( null != list ) {
-				Pipeline p = jedis.pipelined();
+			Pipeline p = jedis.pipelined();
 				
-				for( String nodeKey : list ) {
-					p.scard( nodeKey );
-				}
+			for( String nodeKey : list ) {
+				nodes.put( nodeKey, p.scard( nodeKey + ":" + hostCache.getKey() ) );
+			}
+				
+			p.sync();
+			
+			for( Map.Entry<String, Response<Long>> e : nodes.entrySet() ) {
+				NodeId nodeId = new NodeId( e.getKey() );
+				nodeId.numSavedPath = e.getValue().get();
+				hostCache.nodes.put( e.getKey(), nodeId);
 			}
 			
-			
-			
+			if( "0" == cursor ) loop = false;
 		}
-		
-		
+
 		return hostCache;
 	}
 	
-	@Override
-	public void incNodeFreq( NodeId pid, NodeValue val ) {
-
-		boolean achived = false;
-		int times = counter;
-
-		while( ! achived ) {
-			try{
-
-				++counter;
-				
-				HostCache id = new HostCache( hostId, pid );
-				byte nodeBytes[] = id.getBytes();
-				jedis.sadd( nodeBytes, pathIdBytes );
-				
-				// jedis.sadd
-				achived = true;
-			}catch(Exception e){
-
-				LOG.error("error happen here for pageId :" + pid +" path: "+ path, e );
-				
-				initConnection();
-				if( counter > times + 3 ) {
-					LOG.error( "Can't resolve the issue by reinitilizing the connection" );
-					achived = true;
-				}
-			}
-		}
-	}
-             	
 	
-	@Override
-	protected void addToBackendList( NodeId id ) {
-
-		boolean result = false;
-		boolean achived = false;
-
-		int times = counter;
-
-		while( ! achived ) {
-			try{
-
-				++counter;
+	public void saveHostInfo( HostCache hostCache ) { 
+		Pipeline p = getConnection().pipelined();
+		
+		synchronized( hostCache ) {
 				
-				byte nodeBytes[] = id.getBytes();
-				int freqPath = jedis.scard( nodeBytes ).intValue();
-
-				//LOG.debug( "adding " + id + " with fq:" + freqPath + " for path:" + path );
-				read.put( id, new NodeValue( freqPath ) );
-
-				achived = true;
-			}catch(Exception e){
-
-				LOG.error("error happen here for pageId :" + id +" path: "+ path + " result is " + result+"  ", e );
-
-
-				initConnection();
-				if( counter > times + 3 ) {
-					LOG.error( "Can't resolve the issue by reinitilizing the connection" );
-					achived = true;
+			// create host key	
+			p.sadd( hostCache.getKey(), hostCache.nodes.keySet().toArray( new String[0] ) ); 
+			p.sync();
+			
+			int numOfWrite = 0;
+			for( Map.Entry< String, NodeId > entry : hostCache.nodes.entrySet() ) {
+				int thisPathsSize = entry.getValue().paths.size(); 
+				
+				if( thisPathsSize > Harvester.ft_write ) {
+					p.sadd( entry.getKey() + ":" + hostCache.getKey(), entry.getValue().paths.toArray( new String[0] ) );
+				
+					numOfWrite += thisPathsSize;
+					
+					entry.getValue().numSavedPath += thisPathsSize;
+					entry.getValue().paths.clear();				 
+				}
+				
+				if( numOfWrite > bucketSize ) {
+					numOfWrite -= bucketSize;
+					p.sync();			
 				}
 			}
 		}
+		
+		p.sync();
 	}
+
+
+
 
 
 	@Override
@@ -266,20 +209,5 @@ public class Redis extends Storage {
 	}
 
 
-	@Override
-	protected Map<NodeId, NodeValue> getBackendFreq() {
-		for( NodeId temp : missing ) {
-			addToBackendList( temp );
-		}
-		
-		return read;
-	}
-
-
-	@Override
-	protected boolean cleanUpDb(Set<Integer> hostIds) {
-		// TODO Auto-generated method stub
-		return false;
-	}
 
 }
