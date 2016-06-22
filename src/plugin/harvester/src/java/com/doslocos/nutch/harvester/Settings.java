@@ -42,6 +42,7 @@ public class Settings {
 	
 	static public class Cache {
 		static public final String CONF_PREFIX = Settings.CONF_PREFIX + "cache.";
+		static public final Logger LOG = LoggerFactory.getLogger( Cache.class );
 		
 		/**
 		 * @var int cache_* various cache tuning
@@ -64,6 +65,7 @@ public class Settings {
 
 	static public class NodeUtil {
 		static public final String CONF_PREFIX = Settings.CONF_PREFIX + "util.";
+		static public final Logger LOG = LoggerFactory.getLogger( NodeUtil.class );
 		
 		static public String removeList;
 		
@@ -72,7 +74,7 @@ public class Settings {
 				"server,appserver,meta,link,timestamp,noscript,script,style,form,option,input,select,button,comment,#comment,#text,.hidden" 
 			);
 			
-			LOG.info( "selectList: " + removeList );
+			LOG.info( "remove_list: " + removeList );
 		}
 	}
 
@@ -84,6 +86,7 @@ public class Settings {
 
 		static public class Redis {
 			static public final String CONF_PREFIX = Settings.CONF_PREFIX + "redis.";
+			static public final Logger LOG = LoggerFactory.getLogger( Redis.class );
 			
 			static public final JedisPoolConfig poolConfig = new JedisPoolConfig();
 			static public final ScanParams scanParams = new ScanParams();
@@ -107,17 +110,23 @@ public class Settings {
 				poolConfig.setMaxTotal( conf.getInt( CONF_PREFIX + "setMaxTotal", 16 ) );
 				poolConfig.setMaxIdle( conf.getInt( CONF_PREFIX + "setMaxIdle", 6 ) );
 				
-				LOG.info( "Pool config:" + poolConfig.toString() );
-				
-				
+				LOG.info( "Pool config, getTestOnBorrow: " + poolConfig.getTestOnBorrow() );
+				LOG.info( "Pool config, getTestOnReturn: " + poolConfig.getTestOnReturn() );
+				LOG.info( "Pool config, getTestWhileIdle: " + poolConfig.getTestWhileIdle() );
+				LOG.info( "Pool config, getMaxTotal: " + poolConfig.getMaxTotal() );
+				LOG.info( "Pool config, getMaxIdle: " + poolConfig.getMaxIdle() );
+								
 				bucketSize = conf.getInt( CONF_PREFIX + "bucket_size", 1024 );
-				scanParams.count( bucketSize );			
+				scanParams.count( bucketSize );
+				
+				LOG.info( "Scan params, count: " + bucketSize );
 			}
 		}
 
 
 		static public class Mariadb {
 			static public final String CONF_PREFIX = Settings.CONF_PREFIX + "mariadb.";
+			static public final Logger LOG = LoggerFactory.getLogger( Mariadb.class );
 			
 			static public int poolMaxIdle, poolMaxTotal, readBSize, writeBSize;
 			static public String DBHOST, SCHEMA, USER, PASS;
@@ -161,6 +170,23 @@ public class Settings {
 			}
 
 			
+		}
+	}
+
+
+	static public class IndexingPart {
+		static public final String CONF_PREFIX = Settings.CONF_PREFIX + "indexing.";
+		static public final Logger LOG = LoggerFactory.getLogger( IndexingPart.class );
+		
+		static public String fieldName;
+		static public String[] fieldsToRemove;
+		
+		static public void init() {
+			fieldName = conf.get( CONF_PREFIX + "field_name" , "harvested" );
+			fieldsToRemove = conf.getStrings( CONF_PREFIX + "remove_fileds", new String[0] );
+			
+			LOG.info( CONF_PREFIX + "field_name" + fieldName );
+			LOG.info( "Number of field in " + CONF_PREFIX + "remove_fileds:" + fieldsToRemove.length );
 		}
 	}
 

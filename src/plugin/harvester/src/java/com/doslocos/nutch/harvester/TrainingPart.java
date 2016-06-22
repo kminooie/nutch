@@ -59,11 +59,9 @@ public class TrainingPart implements HtmlParseFilter{
 		LOG.info( "setConf of TrainingPart was called." );
 		
 		if( Settings.setConf( conf ) ) {
-			
-		}
-		
-		LOG.info( "instantiating Harvester" );
-		harvester.init();
+			LOG.info( "instantiating Harvester" );
+			harvester.init();
+		}		
 	}
 
 	public Configuration getConf() {

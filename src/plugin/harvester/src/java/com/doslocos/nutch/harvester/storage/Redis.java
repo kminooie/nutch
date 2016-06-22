@@ -32,13 +32,16 @@ public class Redis extends Storage {
 	private byte[] pathIdBytes = new byte[ Integer.BYTES ];
 	
 	
-	static public synchronized void init() {
+	static public void init() {
 		Storage.init();
 		
-		if( null == pool ) {
-			LOG.info( "Initilizing Redis storage." );
-				
-			pool = new JedisPool( Settings.Storage.Redis.poolConfig, Settings.Storage.Redis.host, Settings.Storage.Redis.port, Settings.Storage.Redis.timeOut );	
+		if( null == pool ) synchronized( Redis.class ) {
+			if( null == pool ) {
+				LOG.info( "Initilizing Redis storage." );
+				pool = new JedisPool( Settings.Storage.Redis.poolConfig, Settings.Storage.Redis.host, Settings.Storage.Redis.port, Settings.Storage.Redis.timeOut );
+			}
+		} else {
+			LOG.warn( "Init is called already" );
 		}
 	}
 
@@ -120,21 +123,27 @@ public class Redis extends Storage {
 	
 	
 	@Override
-	public void saveHostInfo( HostCache hostCache ) { 
-		Pipeline p = getConnection().pipelined();
+	public void saveHostInfo( HostCache hc ) { 
 		
-		synchronized( hostCache ) {
+		if( null == hc ) {
+			LOG.error( "saveHostInfo was passed a null pointer." );
+			return;
+		}
+		
+		Pipeline p = getConnection().pipelined();
+				
+		synchronized( hc ) {
 				
 			// create host key	
-			p.sadd( hostCache.getKey(), hostCache.nodes.keySet().toArray( new String[0] ) ); 
+			p.sadd( hc.getKey(), hc.nodes.keySet().toArray( new String[0] ) ); 
 			p.sync();
 			
 			int numOfWrite = 0;
-			for( Map.Entry< String, NodeId > entry : hostCache.nodes.entrySet() ) {
+			for( Map.Entry< String, NodeId > entry : hc.nodes.entrySet() ) {
 				int thisPathsSize = entry.getValue().paths.size(); 
 				
 				if( thisPathsSize > Settings.Frequency.write ) {
-					p.sadd( entry.getKey() + ":" + hostCache.getKey(), entry.getValue().paths.toArray( new String[0] ) );
+					p.sadd( entry.getKey() + ":" + hc.getKey(), entry.getValue().paths.toArray( new String[0] ) );
 				
 					numOfWrite += thisPathsSize;
 					
@@ -148,7 +157,7 @@ public class Redis extends Storage {
 				}
 			}
 			
-			hostCache.needSave = false;
+			hc.needSave = false;
 		}
 		
 		p.sync();

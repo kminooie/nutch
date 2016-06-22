@@ -19,16 +19,14 @@ public class IndexingPart implements IndexingFilter {
 
 	public static final Logger LOG = LoggerFactory.getLogger(IndexingPart.class);
 
-	private String newFieldName;
 	
 	private Harvester harvester;
-	private String[] fieldsToRemove; 
-	
 	
 	public IndexingPart() {
 		harvester = new Harvester();
-	} 
-	
+	}
+
+
 	@Override
 	public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
 			CrawlDatum datum, Inlinks inlinks) throws IndexingException  {
@@ -49,12 +47,12 @@ public class IndexingPart implements IndexingFilter {
 			netUrl.getPath() 
 		);
 
-		for (String val : fieldsToRemove) {
+		for (String val : Settings.IndexingPart.fieldsToRemove ) {
 			doc.removeField( val );
 		}
 
-		doc.removeField( newFieldName );
-		doc.add( newFieldName, textContent );
+		doc.removeField( Settings.IndexingPart.fieldName );
+		doc.add( Settings.IndexingPart.fieldName, textContent );
 
 		LOG.debug("new parsed text replaced with old one by harvester plug in for : "+url.toString());
 
@@ -63,17 +61,12 @@ public class IndexingPart implements IndexingFilter {
 
 
 	public void setConf(Configuration conf) {
-		
-		newFieldName = conf.get( "doslocos.harvester.fieldname" , "harvested" );
-		fieldsToRemove = conf.getStrings("doslocos.harvester.remove_fileds", new String[0] );
-		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
-		
+		LOG.info( "setting configuration in IndexingFilter" );
+				
 		if( Settings.setConf( conf ) ) {
-			
-		}
-		
-		LOG.info( "instantiating Harvester" );
-		harvester.init();
+			LOG.info( "instantiating Harvester" );
+			harvester.init();
+		}		
 	}
 
 

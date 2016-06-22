@@ -34,13 +34,13 @@ public abstract class Storage {
 
 	
 
-	static public synchronized void init() {
+	static public void init() {
 
 		// prevent being set more than once
-		if( null == mainCache ) {
-			mainCache = new ConcurrentHashMap< Integer, HostCache >( Settings.Cache.hosts_per_job );
+		if( null == mainCache ) synchronized ( Storage.class ) {
+			if( null == mainCache ) mainCache = new ConcurrentHashMap< Integer, HostCache >( Settings.Cache.hosts_per_job );
 		} else {
-			LOG.error( "Seems like Init was called more than once." );
+			LOG.warn( "Seems like Init was called more than once." );
 		}
 		
 		
@@ -122,7 +122,7 @@ public abstract class Storage {
 		if( null == hostCache ) /*synchronized( Storage.mainCache ) */ {
 			// if( null == hostCache ) {
 				hostCache = loadHostInfo( new HostCache( hostId ) );
-				Storage.mainCache.put( hostId, hostCache );
+				mainCache.put( hostId, hostCache );
 				LOG.info( "Loaded host: " + hostCache );
 			// }
 		}
@@ -154,8 +154,10 @@ public abstract class Storage {
 		LOG.info( "Storage finalize was called." );
 	}
 	
-	abstract public HostCache loadHostInfo( HostCache hostCache );
 	
-	abstract public void saveHostInfo( HostCache hostCache );
+	// can't be static because abstract, should lock over hostCache in question
+	abstract public HostCache loadHostInfo( HostCache hc );
+	
+	abstract public void saveHostInfo( HostCache hc );
 	
 }
