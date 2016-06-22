@@ -2,30 +2,21 @@ package com.doslocos.nutch.harvester.storage;
 
 
 import java.util.Map;
-import java.util.Set;
 import java.util.List;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.LinkedHashMap;  
 
-import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.doslocos.nutch.harvester.Harvester;
 import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
-import com.doslocos.nutch.harvester.NodeValue;
 import com.doslocos.nutch.harvester.Settings;
-import com.doslocos.nutch.util.LRUCache;
-import com.doslocos.nutch.util.NodeUtil;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.Response;
-import redis.clients.jedis.ScanParams;
 import redis.clients.jedis.ScanResult;
 
 //import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -111,7 +102,7 @@ public class Redis extends Storage {
 			
 			for( Map.Entry<String, Response<Long>> e : nodes.entrySet() ) {
 				NodeId nodeId = new NodeId( e.getKey() );
-				nodeId.numSavedPath = e.getValue().get();
+				nodeId.numSavedPath = new Long( e.getValue().get() ).intValue();
 				hostCache.nodes.put( e.getKey(), nodeId);
 			}
 			

@@ -7,19 +7,13 @@ package com.doslocos.nutch.harvester;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 
-import com.doslocos.nutch.harvester.storage.Storage;
-import com.doslocos.nutch.util.LRUCache;
 import com.doslocos.nutch.util.NodeUtil;
 
 public class NodeId {
@@ -32,7 +26,8 @@ public class NodeId {
 	public String key; 
 	
 	public final List<String> paths = Collections.synchronizedList( new ArrayList<String>( NUM_PATHS ) );
-	public Long numSavedPath = 0L;
+	
+	public int numSavedPath = 0;
 	
 	static public String makeKey( String nodeXpath, int nodeHash ) {
 		return NodeUtil.encoder.encodeToString( makeBytes( nodeXpath, nodeHash) );
@@ -90,7 +85,7 @@ public class NodeId {
 	public boolean addPath( Integer pathId ) {
 		boolean result = false;
 		
-		if( ( numSavedPath + paths.size() ) < Harvester.ft_max ) {
+		if( numSavedPath < Settings.FThreshold.max ) {
 			result =  paths.add( NodeUtil.intToBase64( pathId ) );
 		}
 

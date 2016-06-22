@@ -17,8 +17,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
-import com.doslocos.nutch.harvester.NodeValue;
 import com.doslocos.nutch.harvester.Settings;
 
 
@@ -128,12 +128,12 @@ public class Mariadb extends Storage {
 		LOG.debug("Connection class created");
 	}
 
-	@Override
+	
 	public void addToBackendList( NodeId id ) {
 
 
 		try {			
-			psNode.setInt( 1, hostId );
+			psNode.setInt( 1, hostHash );
 			psNode.setInt( 2, id.hash );
 			psNode.setInt( 3, id.xpathId );
 
@@ -145,7 +145,7 @@ public class Mariadb extends Storage {
 			LOG.error( "Error while adding an id in frequency table" , e  );
 		}
 
-		if( 0 == newNodes % writeBSize ) updateDB();
+		// if( 0 == newNodes % writeBSize ) updateDB();
 	}
 
 
@@ -163,7 +163,6 @@ public class Mariadb extends Storage {
 			if( null != psFrequency ) psFrequency.close();
 			
 			conn.close();
-			LOG.info( "Page Ended. db counter is:" + counter );
 		}catch(Exception e){
 			LOG.error( "Exception in pageEnd" , e  );
 		}
@@ -171,13 +170,14 @@ public class Mariadb extends Storage {
 	}
 
 
-	@Override
-	public void incNodeFreq( NodeId id, NodeValue val ) {
+	
+	public void incNodeFreq( NodeId id) {
+		int writeBSize = 2; // added so I can compile
 		//	LOG.debug( "incNodeFreq: id:" + id + " val:" + val );
-		if( null == val ) {
+		if( false ) {
 			try {
 
-				psNode.setInt( 1, hostId );
+				psNode.setInt( 1, hostHash );
 				psNode.setInt( 2, id.hash );
 				psNode.setInt( 3, id.xpathId );
 
@@ -190,7 +190,7 @@ public class Mariadb extends Storage {
 			}
 		} else {
 			try {
-				psFrequency.setInt( 1, val.dbId );
+				// psFrequency.setInt( 1, val.dbId );
 				psFrequency.setInt( 2, pathHash );
 
 				psFrequency.addBatch();
@@ -199,7 +199,7 @@ public class Mariadb extends Storage {
 
 				if( 0 == newUrls % writeBSize ) {
 					psFrequency.executeBatch();
-					++counter;
+					
 				}
 
 			} catch( Exception e ) {
@@ -210,6 +210,7 @@ public class Mariadb extends Storage {
 		if( 0 == newNodes % writeBSize ) updateDB();
 
 	}
+
 
 	protected void updateDB( ) {
 		conn = checkConnection( conn );
@@ -226,8 +227,8 @@ public class Mariadb extends Storage {
 
 				psFrequency.addBatch();
 
-			}			
-			++counter;
+			}
+
 			//LOG.debug("updated nodes.");
 		}catch(BatchUpdateException bue){
 
@@ -240,7 +241,7 @@ public class Mariadb extends Storage {
 
 		try {
 			psFrequency.executeBatch();
-			++counter;
+
 			//LOG.debug("updated frequency.");
 		} catch( Exception e ) {
 			LOG.error( "Error while updating frequency:" , e  );
@@ -248,7 +249,7 @@ public class Mariadb extends Storage {
 	}
 
 
-	@Override
+/*
 	protected Map<NodeId, NodeValue> getBackendFreq() {
 
 		HashMap< NodeId, NodeValue > readFreq = new HashMap< NodeId, NodeValue >( 1024 );
@@ -259,7 +260,7 @@ public class Mariadb extends Storage {
 					+ " FROM nodes n"
 					+ " JOIN urls u ON( n.id =  u.node_id AND u.url_id = " + pathHash + " ) "
 					+ " JOIN frequency f ON( n.id = f.node_id )"
-					+ " WHERE n.host_id = " + hostId + " AND ( n.xpath_id, n.hash ) IN ("
+					+ " WHERE n.host_id = " + hostHash + " AND ( n.xpath_id, n.hash ) IN ("
 
 					, sqlPostfix = ")"
 					, nodeList = ""
@@ -283,9 +284,9 @@ public class Mariadb extends Storage {
 
 		return readFreq;
 	}
+*/
 
-
-	protected void readDB( String sql, Map<NodeId, NodeValue> map ) {
+	protected void readDB( String sql  ) {
 
 		conn = checkConnection( conn );
 
@@ -300,9 +301,8 @@ public class Mariadb extends Storage {
 				NodeId pid = new NodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
 				int fq = rs.getInt( "fq" );
 
-				NodeValue val = new NodeValue( fq, nid);
-
-				map.put( pid, val );
+				// NodeValue val = new NodeValue( fq, nid);
+				// map.put( pid, val );
 			}
 			//LOG.debug( "got " + c + " items from database.");
 		} catch( Exception e ) {
@@ -310,8 +310,8 @@ public class Mariadb extends Storage {
 		}
 	}
 
+
 	//the sql must be correct
-	@Override
 	protected boolean cleanUpDb( Set<Integer> hostIds ){
 		boolean result = true ;
 		
@@ -349,6 +349,18 @@ public class Mariadb extends Storage {
 		return result;
 	}
 
+
+	@Override
+	public HostCache loadHostInfo( HostCache hostCache ) {
+		return new HostCache("nohost" );
+	}
+
+	@Override
+	public void saveHostInfo( HostCache hostCache ) {
+		
+	}
+	
+	
 	@Override
 	protected void finalize(){
 		System.out.println( "mariadb finalize was called." );

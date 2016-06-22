@@ -25,6 +25,10 @@ public class IndexingPart implements IndexingFilter {
 	private String[] fieldsToRemove; 
 	
 	
+	public IndexingPart() {
+		harvester = new Harvester();
+	} 
+	
 	@Override
 	public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
 			CrawlDatum datum, Inlinks inlinks) throws IndexingException  {
@@ -59,19 +63,20 @@ public class IndexingPart implements IndexingFilter {
 
 
 	public void setConf(Configuration conf) {
-		harvester = new Harvester();
-
+		
 		newFieldName =  conf.get( "doslocos.harvester.fieldname" , newFieldName );
+		fieldsToRemove = conf.getStrings("doslocos.harvester.remove_fileds", new String[0] );
 		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
 		
-		fieldsToRemove = conf.getStrings("doslocos.harvester.removefileds", new String[0] );
-
-		this.conf = conf;
+		if( Settings.setConf( conf ) ) {
+			LOG.info( "instantiating Harvester" );
+			harvester.init();
+		}
 	}
 
 
 	public Configuration getConf() {
-		return this.conf;
+		return Settings.getConf();
 	}
 
 

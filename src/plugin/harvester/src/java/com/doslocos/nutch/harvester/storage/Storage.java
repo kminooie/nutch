@@ -23,7 +23,7 @@ public abstract class Storage {
 	
 	static public ConcurrentHashMap< Integer, HostCache > mainCache;
 	
-	static private int cacheHit = 0, cacheMissed = 0;
+	// static private int cacheHit = 0, cacheMissed = 0;
 	
 	
 	public String host, path;

@@ -2,18 +2,11 @@ package com.doslocos.nutch.harvester;
 
 import java.lang.reflect.Method;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.hadoop.conf.Configuration;
 
 import org.jsoup.nodes.Node;
 
 import com.doslocos.nutch.harvester.storage.Storage;
-import com.doslocos.nutch.util.LRUCache;
 import com.doslocos.nutch.util.NodeUtil;
 
 import org.slf4j.Logger;
@@ -41,13 +34,9 @@ public class Harvester {
 	
 	public boolean learn( String HTMLBody, String host, String path ) {
 
-		Map<NodeId, NodeValue > map = null;
-		
 		boolean result = false;
 		Node pageNode = null;
 		Storage storage = getStorage( host, path );
-		
-		HostCache hostCache = storage.loadHost( storage.hostId );
 
 		try{
 			pageNode = NodeUtil.parseDom( HTMLBody );
@@ -58,10 +47,10 @@ public class Harvester {
 
 		try {
 			
-			readAllNodes( storage, pageNode, "html/body" );			
-			map = storage.getAllFreq();
+			// readAllNodes( storage, pageNode, "html/body" );			
+			// map = storage.getAllFreq();
 
-			updateNodes( storage, map, pageNode, "html/body" );
+			updateNodes( storage, pageNode, "html/body" );
 
 			storage.pageEnd( true );
 
@@ -76,8 +65,8 @@ public class Harvester {
 
 
 	public String filter( String HTMLBody, String host, String path ) {
-		LOG.debug( "start filtering host: " + host + " path: " + path );
-		Map<NodeId, NodeValue > map = null;
+		LOG.info( "start filtering host: " + host + " path: " + path );
+		
 		String result = null;
 
 		Storage storage = getStorage( host, path );
@@ -85,20 +74,79 @@ public class Harvester {
 		try{
 			Node pageNode = NodeUtil.parseDom( HTMLBody );
 
-			readAllNodes( storage, pageNode, "html/body" );			
-			map = storage.getAllFreq();
+			result = filterNode( storage, pageNode, "html/body" );
+			
+			storage.filterEnd();
 
-			result = filterNode( storage, map, pageNode, "html/body" );
-			storage.pageEnd( false );
-
-			LOG.debug("filter function finished for : "+host+path);
+			LOG.info( "filter function finished for : " + host + path );
 		}catch( Exception e ){
 			LOG.error( "Exception while filtering host: " + host, e );
 		}
 
-		LOG.debug( "number of db roundtrip while filtering: " + storage.counter + " ,url : "+ host);
-
 		return result;
+	}
+
+
+	
+/*
+	private void readAllNodes( Storage s, Node node, String xpath ) {
+		Integer hash = node.hashCode();
+
+		NodeId n = .nodes.get( NodeId.makeKey( xpath, hash ) );
+		if( null == n ) {
+			n = new NodeId( xpath, hash );
+			n.addPath(pathId)
+		}
+		k.addNodeToList( xpath, hash );
+		for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
+			readAllNodes( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
+		}
+	}
+*/
+
+	private void updateNodes( final Storage storage, final Node node, final String xpath ) {
+		int val = storage.hostCache.addNode( xpath, node.hashCode(), storage.pathHash );
+		if( val < Settings.FThreshold.write ) {
+
+			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
+				updateNodes( storage, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
+			}
+		}
+	}
+
+/*
+	private void updateNodes2( final Storage storage, final Map<NodeId, NodeValue> map, final Node node, final String xpath ) {
+		NodeId item = new NodeId( xpath.hashCode(), node.hashCode() );
+
+		NodeValue val = map.get( item );
+
+		storage.incNodeFreq( item, val );
+
+		if( null == val ||  val.frequency < ft_collect ) {
+
+			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
+				updateNodes( storage, map, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
+			}
+		}
+	}
+*/
+
+
+	private String filterNode( final Storage storage, final Node node, final String xpath ) {
+		int frequency = storage.hostCache.readNode( xpath, node.hashCode() );
+		String content = "";
+
+		if( frequency < Settings.FThreshold.write ) {
+			content = NodeUtil.extractText( node );
+
+			for( int i = 0, size = node.childNodeSize(); i < size; ++i ) {
+				Node child = node.childNode( i );
+				String newXpath = xpath + "/" + NodeUtil.xpathMaker( child );
+				content = content + " " + filterNode( storage, child, newXpath );
+			}		
+		}
+
+		return content.trim();
 	}
 
 
@@ -115,67 +163,10 @@ public class Harvester {
 	}
 
 
-
-	private void readAllNodes( Storage s, Node node, String xpath ) {
-		Integer hash = node.hashCode();
-
-		NodeId n = .nodes.get( NodeId.makeKey( xpath, hash ) );
-		if( null == n ) {
-			n = new NodeId( xpath, hash );
-			n.addPath(pathId)
-		}
-		k.addNodeToList( xpath, hash );
-		for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
-			readAllNodes( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
-		}
-	}
-
-
-
-	private void updateNodes( final Storage storage, final Map<NodeId, NodeValue> map, final Node node, final String xpath ) {
-		NodeId item = new NodeId( xpath.hashCode(), node.hashCode() );
-
-		NodeValue val = map.get( item );
-
-		storage.incNodeFreq( item, val );
-
-		if( null == val ||  val.frequency < ft_collect ) {
-
-			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
-				updateNodes( storage, map, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
-			}
-		}
-	}
-
-
-
-	private String filterNode( final Storage storage, final Map<NodeId, NodeValue> map, final Node node, final String xpath ) {
-		int hash = node.hashCode();
-		String content = "";
-
-		NodeId id = new NodeId( xpath, hash );
-		NodeValue val  = map.get( id );
-
-		//LOG.debug("filterNode: id:" + id + " val:" + val );
-		if( null == val || val.frequency < ft_collect ) {
-			content = NodeUtil.extractText( node );
-
-			for( int i = 0, size = node.childNodeSize(); i < size; ++i ){
-				Node child = node.childNode( i );
-				String newXpath = xpath + "/" + NodeUtil.xpathMaker( child );
-				content = content + " " + filterNode( storage, map, child, newXpath );
-			}		
-		}
-
-		return content.trim();
-	}
-
-
 	protected void finalize() {
 		System.err.println( "Harvester finalize was called" );
 		LOG.info( "Harvester finalize was called." );
 	}
-
 
 
 
@@ -193,6 +184,5 @@ public class Harvester {
 	}
 
 
-	
 
 }

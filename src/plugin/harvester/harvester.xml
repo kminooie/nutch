@@ -13,7 +13,7 @@
 
 <property>
 	<name>doslocos.harvester.frequency.write</name>
-	<!- <value>2</value> -->
+	<!-- <value>2</value> -->
 	<default>doslocos.harvester.frequency.collect</default>
 	<description>minimum path frequency needed to be considered for storage
 	</description>
@@ -21,7 +21,7 @@
 
 <property>
 	<name>doslocos.harvester.frequency.max</name>
-	<!- <value>2</value> -->
+	<!-- <value>2</value> -->
 	<default>doslocos.harvester.frequency.write</default>
 	<description>minimum path frequency needed to for node to stop counting paths
 	</description>
@@ -79,22 +79,16 @@
 
 
 <property>
- <name>doslocos.harvester.storage.class</name>
- <value>com.doslocos.nutch.harvester.storage.Redis</value>
- <description>
- for mysql : com.doslocos.nutch.harvester.storage.Mariadb
- for redis : com.doslocos.nutch.harvester.storage.Redis  
- </description>
+	<name>doslocos.harvester.storage.class</name>
+	<value>com.doslocos.nutch.harvester.storage.Redis</value>
+	<description>
+	for mysql : com.doslocos.nutch.harvester.storage.Mariadb
+	for redis : com.doslocos.nutch.harvester.storage.Redis  
+	</description>
 </property>
 
 
-<property>
- <name>doslocos.harvester.storage.batchsize</name>
- <value>100</value>
- <description>
- number of items in each batch  
- </description>
-</property>
+
 
 <!-- mysql database authentication -->
 <property>

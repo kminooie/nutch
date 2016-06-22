@@ -83,6 +83,31 @@ public class HostCache {
 	}
 
 
+	public /*synchronized*/ int addNode( String nodeXpath, Integer nodeHash, Integer pathHash ) {
+		String key = NodeId.makeKey( nodeXpath, nodeHash);
+		NodeId node = nodes.get( key );
+		if( null == node ) {
+			LOG.info( "adding new node key:" + key );
+			node = new NodeId( nodeXpath, nodeHash );
+			nodes.put( key, node );
+		}
+		
+		LOG.info( "adding new path hash:" + pathHash );
+		node.addPath( pathHash );
+		needPrune = needSave = true;
+		
+		return (int)( node.paths.size() + node.numSavedPath );
+	}
+	
+	public int readNode( String nodeXpath, Integer nodeHash ) {
+		int result = 0;
+		String key = NodeId.makeKey( nodeXpath, nodeHash);
+		NodeId node = nodes.get( key );
+		if( null != node ) {
+			result = node.numSavedPath;
+		}
+		return result;
+	}
 	
 	@Override
 	public int hashCode() {
