@@ -16,8 +16,8 @@ public class Settings {
 	static private boolean inited = false;
 
 	
-	static public class FThreshold {
-		static public final String CONF_PREFIX = Settings.CONF_PREFIX + "fthreshold.";
+	static public class Frequency {
+		static public final String CONF_PREFIX = Settings.CONF_PREFIX + "frequency.";
 		
 		/**
 		 * @var int * various frequency thresholds
@@ -165,7 +165,7 @@ public class Settings {
 	}
 
 
-	static synchronized public boolean setConf( Configuration conf ) {
+	static public synchronized boolean setConf( Configuration conf ) {
 		if( inited ) {
 			LOG.error( "should not be here" );
 			return ! inited;
@@ -173,7 +173,7 @@ public class Settings {
 
 		Settings.conf = conf;
 		
-		FThreshold.init();
+		Frequency.init();
 		Cache.init();
 		NodeUtil.init();
 		Storage.init();		

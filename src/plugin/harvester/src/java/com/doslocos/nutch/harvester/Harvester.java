@@ -19,21 +19,26 @@ public class Harvester {
 	static private Class<?> connClass;
 
 
-	public void init() {
-		try {
-			connClass = Class.forName( Settings.Storage.connClassName );
+	public synchronized void init() {
+		if( null == connClass ) {
+			try {
+				connClass = Class.forName( Settings.Storage.connClassName );
 
-			Method init = connClass.getMethod( "init" );
-			init.invoke( null  );
+				Method init = connClass.getMethod( "init" );
+				init.invoke( null  );
 
-		} catch( Exception e ) {
-			LOG.error( "Got exception while calling init: ", e );
-			// die();
+			} catch( Exception e ) {
+				LOG.error( "Got exception while calling init: ", e );
+				// die();
+			}
+
+		} else {
+			LOG.warn( "Harvester is already initialized." );
 		}
 	}
 	
 	public boolean learn( String HTMLBody, String host, String path ) {
-
+		LOG.info( "start learning host: " + host + " path: " + path );
 		boolean result = false;
 		Node pageNode = null;
 		Storage storage = getStorage( host, path );
@@ -106,7 +111,7 @@ public class Harvester {
 
 	private void updateNodes( final Storage storage, final Node node, final String xpath ) {
 		int val = storage.hostCache.addNode( xpath, node.hashCode(), storage.pathHash );
-		if( val < Settings.FThreshold.write ) {
+		if( val < Settings.Frequency.write ) {
 
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 				updateNodes( storage, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
@@ -136,7 +141,7 @@ public class Harvester {
 		int frequency = storage.hostCache.readNode( xpath, node.hashCode() );
 		String content = "";
 
-		if( frequency < Settings.FThreshold.write ) {
+		if( frequency < Settings.Frequency.write ) {
 			content = NodeUtil.extractText( node );
 
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ) {

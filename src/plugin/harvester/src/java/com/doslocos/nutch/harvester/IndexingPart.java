@@ -19,8 +19,8 @@ public class IndexingPart implements IndexingFilter {
 
 	public static final Logger LOG = LoggerFactory.getLogger(IndexingPart.class);
 
-	private String newFieldName = "harvested";
-	private Configuration conf;
+	private String newFieldName;
+	
 	private Harvester harvester;
 	private String[] fieldsToRemove; 
 	
@@ -64,14 +64,16 @@ public class IndexingPart implements IndexingFilter {
 
 	public void setConf(Configuration conf) {
 		
-		newFieldName =  conf.get( "doslocos.harvester.fieldname" , newFieldName );
+		newFieldName = conf.get( "doslocos.harvester.fieldname" , "harvested" );
 		fieldsToRemove = conf.getStrings("doslocos.harvester.remove_fileds", new String[0] );
 		LOG.info( "doslocos.harvester.fieldname: " + newFieldName );
 		
 		if( Settings.setConf( conf ) ) {
-			LOG.info( "instantiating Harvester" );
-			harvester.init();
+			
 		}
+		
+		LOG.info( "instantiating Harvester" );
+		harvester.init();
 	}
 
 

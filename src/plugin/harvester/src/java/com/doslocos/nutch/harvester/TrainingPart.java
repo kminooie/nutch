@@ -20,7 +20,7 @@ public class TrainingPart implements HtmlParseFilter{
 
 	public static final Logger LOG = LoggerFactory.getLogger(TrainingPart.class);
 
-	public static Harvester harvester;	
+	private Harvester harvester;	
 
 
 	public TrainingPart() {
@@ -56,12 +56,14 @@ public class TrainingPart implements HtmlParseFilter{
 
 
 	public void setConf(Configuration conf) {
-		LOG.debug( "setConf of TrainingPart was called." );
+		LOG.info( "setConf of TrainingPart was called." );
 		
 		if( Settings.setConf( conf ) ) {
-			LOG.info( "instantiating Harvester" );
-			harvester.init();
+			
 		}
+		
+		LOG.info( "instantiating Harvester" );
+		harvester.init();
 	}
 
 	public Configuration getConf() {

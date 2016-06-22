@@ -80,24 +80,28 @@ public class Redis extends Storage {
 
 	@Override
 	public HostCache loadHostInfo( HostCache hostCache ) {
-		Jedis jedis = getConnection();		
-				
+		Jedis conn = getConnection();
+		LOG.info( "Loading host:" + hostCache );
+
 		boolean loop = true;
 		String cursor = "0";
 		
 		while( loop ) {
-			ScanResult<String> scanResult = jedis.sscan( hostCache.getKey(), cursor, Settings.Storage.Redis.scanParams );
+			ScanResult<String> scanResult = conn.sscan( hostCache.getKey(), cursor, Settings.Storage.Redis.scanParams );
 			cursor = scanResult.getStringCursor();
-			
 			List<String> list = scanResult.getResult();
+			
+			LOG.info( "cursor is " + cursor + " result has:" + list.size() );
+			
 			LinkedHashMap< String, Response< Long > > nodes = new LinkedHashMap< String, Response< Long > >( list.size() );
 			
-			Pipeline p = jedis.pipelined();
+			Pipeline p = conn.pipelined();
 				
 			for( String nodeKey : list ) {
 				nodes.put( nodeKey, p.scard( nodeKey + ":" + hostCache.getKey() ) );
 			}
-				
+			
+			LOG.info( "about to sync, number of nodes is:" + nodes.size() );
 			p.sync();
 			
 			for( Map.Entry<String, Response<Long>> e : nodes.entrySet() ) {
@@ -106,7 +110,7 @@ public class Redis extends Storage {
 				hostCache.nodes.put( e.getKey(), nodeId);
 			}
 			
-			if( "0" == cursor ) loop = false;
+			if( cursor.equals( "0" ) ) loop = false;
 		}
 
 		return hostCache;
@@ -127,7 +131,7 @@ public class Redis extends Storage {
 			for( Map.Entry< String, NodeId > entry : hostCache.nodes.entrySet() ) {
 				int thisPathsSize = entry.getValue().paths.size(); 
 				
-				if( thisPathsSize > Settings.FThreshold.write ) {
+				if( thisPathsSize > Settings.Frequency.write ) {
 					p.sadd( entry.getKey() + ":" + hostCache.getKey(), entry.getValue().paths.toArray( new String[0] ) );
 				
 					numOfWrite += thisPathsSize;
