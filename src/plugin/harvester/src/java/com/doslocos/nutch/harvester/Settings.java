@@ -50,11 +50,11 @@ public class Settings {
 		static public float load_factor;
 		
 		static public void init() {
-			nodes_per_page = conf.getInt( CONF_PREFIX + "hosts_per_job", 2048 );
-			LOG.info( "cache_nodes_per_page: " + hosts_per_job );
+			hosts_per_job = conf.getInt( CONF_PREFIX + "hosts_per_job", 2048 );
+			LOG.info( "cache hosts_per_job: " + hosts_per_job );
 			
 			nodes_per_page = conf.getInt( CONF_PREFIX + "nodes_per_page", 4096 );
-			LOG.info( "cache_nodes_per_page: " + nodes_per_page );
+			LOG.info( "cache nodes_per_page: " + nodes_per_page );
 
 			load_factor = conf.getFloat( CONF_PREFIX + "load_factor", 0.95f );
 			LOG.info( "cache_load_factor: " + load_factor );
@@ -92,7 +92,7 @@ public class Settings {
 			static public String host;
 			
 			static public void init() {
-				
+				LOG.info( "conf_prefix:" + CONF_PREFIX );
 				host = conf.get( CONF_PREFIX + "host", "localhost" );
 				port = conf.getInt( CONF_PREFIX + "port", 6379 );
 				db = conf.getInt( CONF_PREFIX + "db", 15 );
