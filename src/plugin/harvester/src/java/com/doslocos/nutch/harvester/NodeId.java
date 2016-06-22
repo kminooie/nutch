@@ -85,7 +85,7 @@ public class NodeId {
 	public boolean addPath( Integer pathId ) {
 		boolean result = false;
 		
-		if( numSavedPath < Settings.FThreshold.max ) {
+		if( numSavedPath < Settings.Frequency.max ) {
 			result =  paths.add( NodeUtil.intToBase64( pathId ) );
 		}
 

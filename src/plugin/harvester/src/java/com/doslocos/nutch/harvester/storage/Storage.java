@@ -89,7 +89,7 @@ public abstract class Storage {
 			
 			while( itr.hasNext() ) {
 				Map.Entry< String, NodeId > pageEntry = itr.next();
-				if( pageEntry.getValue().paths.size() < Settings.FThreshold.collect ) {
+				if( pageEntry.getValue().paths.size() < Settings.Frequency.collect ) {
 					Storage.LOG.info( "removing node: " + pageEntry.getKey() + " with size:" + pageEntry.getValue().paths.size() );
 					itr.remove();
 				}				
@@ -136,7 +136,7 @@ public abstract class Storage {
 	}
 	
 	public void learnEnd() {
-		if ( 0 == pageLearnedCounter.incrementAndGet() % Settings.FThreshold.gc ) {
+		if ( 0 == pageLearnedCounter.incrementAndGet() % Settings.Frequency.gc ) {
 			LOG.info( "after learning gc is triggered, counter:" + pageLearnedCounter.intValue() );
 			pruneMainCache();				
 		}		

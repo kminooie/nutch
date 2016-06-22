@@ -17,7 +17,7 @@ import com.doslocos.nutch.util.NodeUtil;
 
 public class HostCache {
 
-	static public final Logger LOG = LoggerFactory.getLogger( NodeId.class );
+	static public final Logger LOG = LoggerFactory.getLogger( HostCache.class );
 	static public final int BYTES = Integer.BYTES ;// + NodeId.BYTES;
 	
 	
@@ -70,7 +70,7 @@ public class HostCache {
 				Map.Entry< String, NodeId > entry = itr.next();
 				NodeId node = entry.getValue();
 				
-				if( Settings.FThreshold.collect < node.paths.size() ) {
+				if( Settings.Frequency.collect < node.paths.size() ) {
 					LOG.info( "removing node: " + entry.getKey() + " with size:" + node.paths.size() + " num of saved paths:" + node.numSavedPath );
 			
 					itr.remove();

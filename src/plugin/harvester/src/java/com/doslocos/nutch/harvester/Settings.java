@@ -92,7 +92,7 @@ public class Settings {
 			static public String host;
 			
 			static public void init() {
-				LOG.info( "conf_prefix:" + CONF_PREFIX );
+				LOG.info( "conf_prefix+host:" + CONF_PREFIX + "host" );
 				host = conf.get( CONF_PREFIX + "host", "localhost" );
 				port = conf.getInt( CONF_PREFIX + "port", 6379 );
 				db = conf.getInt( CONF_PREFIX + "db", 15 );

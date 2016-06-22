@@ -50,6 +50,8 @@ public class Redis extends Storage {
 			
 			conn = pool.getResource(); 
 			conn.select( Settings.Storage.Redis.db );
+			
+			LOG.info( " returning the connection." );
 		}catch( Exception e ){
 			LOG.error( "while getting the connection:", e );
 		}
