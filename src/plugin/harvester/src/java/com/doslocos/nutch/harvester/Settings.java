@@ -18,6 +18,7 @@ public class Settings {
 	
 	static public class Frequency {
 		static public final String CONF_PREFIX = Settings.CONF_PREFIX + "frequency.";
+		static public final Logger LOG = LoggerFactory.getLogger( Frequency.class );
 		
 		/**
 		 * @var int * various frequency thresholds
@@ -99,7 +100,7 @@ public class Settings {
 				host = conf.get( CONF_PREFIX + "host", "localhost" );
 				port = conf.getInt( CONF_PREFIX + "port", 6379 );
 				db = conf.getInt( CONF_PREFIX + "db", 15 );
-				timeOut = conf.getInt( CONF_PREFIX + "dbTimeOut", 0 );
+				timeOut = conf.getInt( CONF_PREFIX + "timeOut", 0 );
 				
 				LOG.info( "Redis host:" + host + ":" + port +" db:"+ db + " timeout:" + timeOut );
 				

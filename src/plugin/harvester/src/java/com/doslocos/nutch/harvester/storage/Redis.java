@@ -37,8 +37,15 @@ public class Redis extends Storage {
 		
 		if( null == pool ) synchronized( Redis.class ) {
 			if( null == pool ) {
-				LOG.info( "Initilizing Redis storage." );
+				LOG.info( "Pool config, getTestOnBorrow: " + Settings.Storage.Redis.poolConfig.getTestOnBorrow() );
+				LOG.info( "Pool config, getTestOnReturn: " + Settings.Storage.Redis.poolConfig.getTestOnReturn() );
+				LOG.info( "Pool config, getTestWhileIdle: " + Settings.Storage.Redis.poolConfig.getTestWhileIdle() );
+				LOG.info( "Pool config, getMaxTotal: " + Settings.Storage.Redis.poolConfig.getMaxTotal() );
+				LOG.info( "Pool config, getMaxIdle: " + Settings.Storage.Redis.poolConfig.getMaxIdle() );
+				
 				pool = new JedisPool( Settings.Storage.Redis.poolConfig, Settings.Storage.Redis.host, Settings.Storage.Redis.port, Settings.Storage.Redis.timeOut );
+				LOG.info( "Initilizing Redis storage." );
+				
 			}
 		} else {
 			LOG.warn( "Init is called already" );
