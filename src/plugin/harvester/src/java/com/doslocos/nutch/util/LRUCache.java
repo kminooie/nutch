@@ -90,7 +90,7 @@ public class LRUCache<K,V> {
 	* Returns the number of used entries in the cache.
 	* @return the number of entries currently in the cache.
 	*/
-	public synchronized int usedEntries() {
+	public synchronized int size() {
 		return map.size();
 	}
 
@@ -106,10 +106,7 @@ public class LRUCache<K,V> {
 	public synchronized Set<K> keySet() {
 		return map.keySet();
 	}
-	
-	public synchronized int size() {
-		return map.size();
-	}
+
 	
 	public synchronized Set<Entry<K, V>> entrySet() {
 		return map.entrySet();

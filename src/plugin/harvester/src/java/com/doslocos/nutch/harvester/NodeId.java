@@ -96,6 +96,31 @@ public class NodeId {
 		return key;
 	}
 
+	public ArrayList<String> getPathsKeys() {
+		
+		ArrayList<String> result = new ArrayList<String>( paths.size() );
+		
+		synchronized( paths ) {
+			result.addAll( paths );
+			paths.clear();
+			numSavedPath += result.size();
+		}
+
+		return result;
+	}
+	
+	public String[] getPathsKeysStrings() {
+		String[] result;
+		
+		synchronized( paths ) {
+			result = paths.toArray( new String[0] );
+			paths.clear();
+			numSavedPath += result.length;
+		}
+
+		return result;
+	}
+
 	public int getFrequency() {
 		return numSavedPath + paths.size();
 	}

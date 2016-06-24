@@ -4,7 +4,8 @@ package com.doslocos.nutch.harvester.storage;
 import java.util.Map;
 import java.util.List;
 import java.nio.ByteBuffer;
-import java.util.LinkedHashMap;  
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.Settings;
+import com.doslocos.nutch.util.NodeUtil;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -26,11 +28,12 @@ import redis.clients.jedis.ScanResult;
 public class Redis extends Storage {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Redis.class );
-
+	static public final byte[] INITIAL_CURSOR = new String( "0" ).getBytes();
+	
 	static private JedisPool pool;
 
 	private Jedis jedis;
-	private byte[] pathIdBytes = new byte[ Integer.BYTES ];
+	private byte[] pathIdBytes; // = new byte[ Integer.BYTES ];
 	
 	
 	static public void init() {
@@ -116,43 +119,50 @@ public class Redis extends Storage {
  	public Redis( String host, String path ) {
 		super( host, path );
 		ByteBuffer.wrap( pathIdBytes ).putInt( pathHash );
+		// pathIdBytes = NodeUtil.encoder.
 		initConnection();
 	}
 
 	
-	private boolean initConnection() {
-		boolean result = false ;
-
+	private void initConnection() {
 		if( null == jedis || ! jedis.isConnected() ) {
 			jedis = getConnection();
 		}
-
-		result = true ;
-		
-		return result;
 	}
 	
 
 	@Override
 	public HostCache loadHostInfo( HostCache hc ) {
-		Jedis conn = getConnection();
-
-		boolean loop = true;
-		String cursor = "0";
+		initConnection();
+	
+		Pipeline p = jedis.pipelined();
+		byte[] cursor = INITIAL_CURSOR;
+		byte[] hostPostFix = hc.getKey( true ).getBytes();
+		LinkedHashMap< String, Response< Long > > nodes = new LinkedHashMap< String, Response< Long > >( 
+				Settings.Cache.getInitialCapacity( Settings.Storage.Redis.bucketSize + 1 ),
+				Settings.Cache.load_factor
+			);
 		
-		while( loop ) {
-			ScanResult<String> scanResult = conn.sscan( hc.getKey(), cursor, Settings.Storage.Redis.scanParams );
-			cursor = scanResult.getStringCursor();
-			List<String> list = scanResult.getResult();
+		do {
+			// get the list of nodes for the given host
+			ScanResult<byte[]> scanResult = jedis.sscan( hc.getKey( false ).getBytes(), cursor, Settings.Storage.Redis.scanParams );
+
+			nodes.clear();
 			
-			LOG.info( "cursor is " + cursor + " result has:" + list.size() );
+			cursor = scanResult.getCursorAsBytes();
+			List<byte[]> nodeKeyList = scanResult.getResult();
 			
-			LinkedHashMap< String, Response< Long > > nodes = new LinkedHashMap< String, Response< Long > >( list.size() );
-			
-			Pipeline p = conn.pipelined();
+			if( LOG.isDebugEnabled() ) {
+				LOG.debug( "cursor is " + new String( cursor ) + " result has:" + nodeKeyList.size() );
+			}			
 				
-			for( String nodeKey : list ) {
-				nodes.put( nodeKey, p.scard( nodeKey + ":" + hc.getKey() ) );
+			for( byte[] nodeKey : nodeKeyList ) {
+				
+				byte[] key = new byte[ nodeKey.length + hostPostFix.length ];
+				System.arraycopy( nodeKey, 0, key, 0, nodeKey.length);
+				System.arraycopy( hostPostFix, 0, key, nodeKey.length, hostPostFix.length);
+				
+				nodes.put( new String( nodeKey ), p.scard( key ) );
 			}
 			
 			LOG.info( "about to sync, number of nodes is:" + nodes.size() );
@@ -168,8 +178,7 @@ public class Redis extends Storage {
 				hc.nodes.put( e.getKey(), nodeId);
 			}
 			
-			if( cursor.equals( "0" ) ) loop = false;
-		}		
+		} while( ! Arrays.equals( cursor, INITIAL_CURSOR ) );	
 
 		LOG.info( "Loaded: " + hc );
 
@@ -185,41 +194,46 @@ public class Redis extends Storage {
 			return;
 		}
 		
-		Pipeline p = getConnection().pipelined();
-				
+		Pipeline p = jedis.pipelined();
+		String hostPostFix = hc.getKey( true );
+
 		synchronized( hc ) {
 				
 			// create host key	
-			p.sadd( hc.getKey(), hc.getNodesKeys() ); 
+			p.sadd( hc.getKey( false ), hc.getNodesKeys() ); 
 			p.sync();
 			
-			int numOfWrite = 0;
-			for( Map.Entry< String, NodeId > entry : hc.nodes.entrySet() ) {
-				int thisPathsSize = entry.getValue().paths.size(); 
+			int writeCounter = 0;
+			
+			for( Map.Entry< String, NodeId > node : hc.nodes.entrySet() ) {
+				int recentFrequency = node.getValue().getRecentFrequency(); 
+				int oldFrequency = node.getValue().getFrequency() - recentFrequency;
 				
-				if( thisPathsSize > Settings.Frequency.write ) {
-					p.sadd( entry.getKey() + ":" + hc.getKey(), entry.getValue().paths.toArray( new String[0] ) );
-				
-					numOfWrite += thisPathsSize;
+				if( recentFrequency > Settings.Frequency.write ) {
+					String[] pathsKeys = node.getValue().getPathsKeysStrings();
 					
-					entry.getValue().getFrequency() += thisPathsSize;
-					entry.getValue().paths.clear();				 
-				}
-				
-				if( numOfWrite > Settings.Storage.Redis.bucketSize ) {
-					numOfWrite -= Settings.Storage.Redis.bucketSize;
-					p.sync();			
-				}
+					if( oldFrequency < Settings.Frequency.max ) {
+						p.sadd( node.getKey() + hostPostFix, pathsKeys );						
+						++writeCounter; // += recentFrequency;
+					} else {
+						LOG.warn( "throwing out paths of populor node:" + node.getKey() );
+					}
+					
+					if( writeCounter > Settings.Storage.Redis.bucketSize ) {
+						p.sync();
+						writeCounter = 0;		
+					}
+				}			
 			}
 			
+			if( writeCounter > 0 ) {
+				p.sync();	
+			}
+
 			hc.needSave = false;
 		}
-		
-		p.sync();
+
 	}
-
-
-	
 
 
 	@Override
@@ -241,9 +255,7 @@ public class Redis extends Storage {
 
 	@Override
 	public void pageEnd( boolean learn ) {
-		LOG.debug( "PageEnd was called" );
-		
-		super.pageEnd(learn);
+		// LOG.debug( "PageEnd was called" );
 	}
 
 }

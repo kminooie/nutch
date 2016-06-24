@@ -61,8 +61,12 @@ public class Settings {
 			nodes_per_page = conf.getInt( CONF_PREFIX + "nodes_per_page", 4096 );
 			LOG.info( "cache nodes_per_page: " + nodes_per_page );
 
-			load_factor = conf.getFloat( CONF_PREFIX + "load_factor", 0.95f );
+			load_factor = conf.getFloat( CONF_PREFIX + "load_factor", 0.75f );
 			LOG.info( "cache_load_factor: " + load_factor );
+		}
+		
+		static public int getInitialCapacity( int items ) {
+			return (int) Math.ceil( items / load_factor ) + 16;
 		}
 	}
 
@@ -85,6 +89,7 @@ public class Settings {
 
 	static public class Storage {
 
+		static public final String SEPARATOR = ":";
 		static public String connClassName;
 
 

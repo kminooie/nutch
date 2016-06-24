@@ -46,11 +46,11 @@ public class HostCache {
 	}
 
 	
-	public String getKey() {
+	public String getKey( boolean preFix ) {
 		if( null == key ) {
 			key = NodeUtil.encoder.encodeToString( getBytes() );
 		}
-		return key;
+		return ( preFix ? Settings.Storage.SEPARATOR : null ) + key;
 	}
 
 	public byte[] getBytes() {

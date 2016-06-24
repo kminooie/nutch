@@ -153,7 +153,7 @@ public abstract class Storage {
 		
 		saveHostInfo( hostCache );
 		HostCache test1 = loadHostInfo( new HostCache( hostHash ) );
-		HostCache test2 = loadHostInfo( new HostCache( hostCache.getKey() ) );
+		HostCache test2 = loadHostInfo( new HostCache( hostCache.getKey( false ) ) );
 		
 		LOG.info( "original:" + hostCache );
 		LOG.info( "test1:" + test1 );
