@@ -15,6 +15,7 @@ import com.doslocos.nutch.harvester.Settings;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.Response;
 import redis.clients.jedis.ScanResult;
@@ -37,15 +38,16 @@ public class Redis extends Storage {
 		
 		if( null == pool ) synchronized( Redis.class ) {
 			if( null == pool ) {
-				LOG.info( "Pool config, getTestOnBorrow: " + Settings.Storage.Redis.poolConfig.getTestOnBorrow() );
-				LOG.info( "Pool config, getTestOnReturn: " + Settings.Storage.Redis.poolConfig.getTestOnReturn() );
-				LOG.info( "Pool config, getTestWhileIdle: " + Settings.Storage.Redis.poolConfig.getTestWhileIdle() );
-				LOG.info( "Pool config, getMaxTotal: " + Settings.Storage.Redis.poolConfig.getMaxTotal() );
-				LOG.info( "Pool config, getMaxIdle: " + Settings.Storage.Redis.poolConfig.getMaxIdle() );
+				// dumpPoolConfig( Settings.Storage.Redis.poolConfig );
 				
 				pool = new JedisPool( Settings.Storage.Redis.poolConfig, Settings.Storage.Redis.host, Settings.Storage.Redis.port, Settings.Storage.Redis.timeOut );
-				LOG.info( "Initilizing Redis storage." );
+				LOG.info( "Instanciated redis pool." );
 				
+				// if( null == getConnection() ) {
+				// 	LOG.error( "Got back null from getConnection" );
+				// } else {
+				// 	LOG.info( "Initilized Redis storage." );
+				// }
 			}
 		} else {
 			LOG.warn( "Init is called already" );
@@ -56,12 +58,14 @@ public class Redis extends Storage {
 		Jedis conn = null;
 		
 		try{			
-			LOG.info( "Getting a new connection." );
+			// LOG.debug( "Getting a new connection." );
+			// dumpPool();
 			
 			conn = pool.getResource(); 
 			conn.select( Settings.Storage.Redis.db );
 			
-			LOG.info( " returning the connection." );
+			// dumpPool();
+			LOG.debug( "Got the connection, returning ..." );
 		}catch( Exception e ){
 			LOG.error( "while getting the connection:", e );
 		}
@@ -69,6 +73,45 @@ public class Redis extends Storage {
 		return conn;
 	}
 	
+	static public void dumpPool() { 
+		LOG.debug( "Pool settings:" );
+
+		synchronized( pool ) {
+			LOG.debug( "getNumActive:" + pool.getNumActive() );
+			LOG.debug( "getNumIdle:" + pool.getNumIdle() );
+			LOG.debug( "getNumWaiters:" + pool.getNumWaiters() );
+			LOG.debug( "getMaxBorrowWaitTimeMillis:" + pool.getMaxBorrowWaitTimeMillis() );
+			LOG.debug( "getMeanBorrowWaitTimeMillis:" + pool.getMeanBorrowWaitTimeMillis() );
+			LOG.debug( "isClosed:" + pool.isClosed() );
+		}
+	}
+	
+	
+	static public void dumpPoolConfig( JedisPoolConfig conf ) {
+		LOG.debug( "PoolConfig Settings:" );
+
+		synchronized( conf ) {
+			LOG.debug( "getEvictionPolicyClassName:" + conf.getEvictionPolicyClassName() );
+			LOG.debug( "getJmxNameBase:" + conf.getJmxNameBase() );
+			LOG.debug( "getJmxNamePrefix:" + conf.getJmxNamePrefix() );
+			LOG.debug( "getMaxIdle:" + conf.getMaxIdle() );
+			LOG.debug( "getMaxTotal:" + conf.getMaxTotal() );
+			LOG.debug( "getMaxWaitMillis:" + conf.getMaxWaitMillis() );
+			LOG.debug( "getMinEvictableIdleTimeMillis:" + conf.getMinEvictableIdleTimeMillis() );
+			LOG.debug( "getMinIdle:" + conf.getMinIdle() );
+			LOG.debug( "getNumTestsPerEvictionRun:" + conf.getNumTestsPerEvictionRun() );
+			LOG.debug( "getSoftMinEvictableIdleTimeMillis:" + conf.getSoftMinEvictableIdleTimeMillis() );
+			LOG.debug( "getTimeBetweenEvictionRunsMillis:" + conf.getTimeBetweenEvictionRunsMillis() );
+			LOG.debug( "getBlockWhenExhausted:" + conf.getBlockWhenExhausted() );
+			LOG.debug( "getFairness:" + conf.getFairness() );
+			LOG.debug( "getJmxEnabled:" + conf.getJmxEnabled() );
+			LOG.debug( "getLifo:" + conf.getLifo() );
+			LOG.debug( "getTestOnBorrow:" + conf.getTestOnBorrow() );
+			LOG.debug( "getTestOnCreate:" + conf.getTestOnCreate() );
+			LOG.debug( "getTestOnReturn:" + conf.getTestOnReturn() );
+			LOG.debug( "getTestWhileIdle:" + conf.getTestWhileIdle() );
+		}
+	}
 	
  	public Redis( String host, String path ) {
 		super( host, path );
@@ -91,15 +134,14 @@ public class Redis extends Storage {
 	
 
 	@Override
-	public HostCache loadHostInfo( HostCache hostCache ) {
+	public HostCache loadHostInfo( HostCache hc ) {
 		Jedis conn = getConnection();
-		LOG.info( "Loading host:" + hostCache );
 
 		boolean loop = true;
 		String cursor = "0";
 		
 		while( loop ) {
-			ScanResult<String> scanResult = conn.sscan( hostCache.getKey(), cursor, Settings.Storage.Redis.scanParams );
+			ScanResult<String> scanResult = conn.sscan( hc.getKey(), cursor, Settings.Storage.Redis.scanParams );
 			cursor = scanResult.getStringCursor();
 			List<String> list = scanResult.getResult();
 			
@@ -110,22 +152,28 @@ public class Redis extends Storage {
 			Pipeline p = conn.pipelined();
 				
 			for( String nodeKey : list ) {
-				nodes.put( nodeKey, p.scard( nodeKey + ":" + hostCache.getKey() ) );
+				nodes.put( nodeKey, p.scard( nodeKey + ":" + hc.getKey() ) );
 			}
 			
 			LOG.info( "about to sync, number of nodes is:" + nodes.size() );
 			p.sync();
 			
 			for( Map.Entry<String, Response<Long>> e : nodes.entrySet() ) {
-				NodeId nodeId = new NodeId( e.getKey() );
-				nodeId.numSavedPath = new Long( e.getValue().get() ).intValue();
-				hostCache.nodes.put( e.getKey(), nodeId);
+				NodeId nodeId = new NodeId( new Long( e.getValue().get() ).intValue(), e.getKey() );
+				if( ! e.getKey().equals( nodeId.getKey() ) ) {
+					LOG.error(" sanity failed." );
+					LOG.error( e.getKey() + " is not equal with: " + nodeId.getKey() );
+				}
+
+				hc.nodes.put( e.getKey(), nodeId);
 			}
 			
 			if( cursor.equals( "0" ) ) loop = false;
-		}
+		}		
 
-		return hostCache;
+		LOG.info( "Loaded: " + hc );
+
+		return hc;
 	}
 	
 	
@@ -142,7 +190,7 @@ public class Redis extends Storage {
 		synchronized( hc ) {
 				
 			// create host key	
-			p.sadd( hc.getKey(), hc.nodes.keySet().toArray( new String[0] ) ); 
+			p.sadd( hc.getKey(), hc.getNodesKeys() ); 
 			p.sync();
 			
 			int numOfWrite = 0;
@@ -154,7 +202,7 @@ public class Redis extends Storage {
 				
 					numOfWrite += thisPathsSize;
 					
-					entry.getValue().numSavedPath += thisPathsSize;
+					entry.getValue().getFrequency() += thisPathsSize;
 					entry.getValue().paths.clear();				 
 				}
 				
@@ -171,7 +219,7 @@ public class Redis extends Storage {
 	}
 
 
-
+	
 
 
 	@Override
@@ -194,9 +242,8 @@ public class Redis extends Storage {
 	@Override
 	public void pageEnd( boolean learn ) {
 		LOG.debug( "PageEnd was called" );
+		
 		super.pageEnd(learn);
 	}
-
-
 
 }

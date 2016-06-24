@@ -1,5 +1,8 @@
 package com.doslocos.nutch.harvester;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,10 +99,9 @@ public class Settings {
 			static public String host;
 			
 			static public void init() {
-				LOG.info( "conf_prefix+host:" + CONF_PREFIX + "host" );
 				host = conf.get( CONF_PREFIX + "host", "localhost" );
 				port = conf.getInt( CONF_PREFIX + "port", 6379 );
-				db = conf.getInt( CONF_PREFIX + "db", 15 );
+				db = conf.getInt( CONF_PREFIX + "db", 0 );
 				timeOut = conf.getInt( CONF_PREFIX + "timeOut", 0 );
 				
 				LOG.info( "Redis host:" + host + ":" + port +" db:"+ db + " timeout:" + timeOut );
@@ -160,7 +162,7 @@ public class Settings {
 			if( connClassName.equals( "com.doslocos.nutch.harvester.storage.Redis" ) ) {
 				Redis.init();
 				
-			} else if( connClassName.equals( "com.doslocos.nutch.harvester.storage.Redis" ) ) {
+			} else if( connClassName.equals( "com.doslocos.nutch.harvester.storage.Mariadb" ) ) {
 				Mariadb.init();
 				
 			} else {
@@ -180,14 +182,15 @@ public class Settings {
 		static public final Logger LOG = LoggerFactory.getLogger( IndexingPart.class );
 		
 		static public String fieldName;
-		static public String[] fieldsToRemove;
+		static public ArrayList< String > fieldsToRemove;
 		
 		static public void init() {
 			fieldName = conf.get( CONF_PREFIX + "field_name" , "harvested" );
-			fieldsToRemove = conf.getStrings( CONF_PREFIX + "remove_fileds", new String[0] );
-			
-			LOG.info( CONF_PREFIX + "field_name" + fieldName );
-			LOG.info( "Number of field in " + CONF_PREFIX + "remove_fileds:" + fieldsToRemove.length );
+			fieldsToRemove = new ArrayList< String >( Arrays.asList( conf.getStrings( CONF_PREFIX + "remove_fileds", new String[0] ) ) );
+						
+			LOG.info( CONF_PREFIX + "field_name:" + fieldName );
+			LOG.info( CONF_PREFIX + "remove_fileds:" + fieldsToRemove );
+			fieldsToRemove.add( fieldName );
 		}
 	}
 
@@ -202,9 +205,12 @@ public class Settings {
 		
 		Frequency.init();
 		Cache.init();
-		NodeUtil.init();
 		Storage.init();		
 
+
+		NodeUtil.init();
+		IndexingPart.init();
+		
 		return inited = true;
 	}
 	

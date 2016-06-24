@@ -21,22 +21,17 @@ public class HostCache {
 	static public final int BYTES = Integer.BYTES ;// + NodeId.BYTES;
 	
 	
-	public int hostId;
-	public String key;
+	public final int hostId;
+	private String key;
 	
 	public boolean needPrune = false, needSave = false;
 	
 	public LRUCache< String, NodeId > nodes;
 
-	
-	private HostCache() {
-		nodes = new LRUCache< String, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
-	}
-	
+		
 	public HostCache( int hostId ) {
-		this();
 		this.hostId = hostId;
-		key = NodeUtil.encoder.encodeToString( getBytes() );
+		nodes = new LRUCache< String, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 	
 	public HostCache( String key ) {
@@ -45,13 +40,16 @@ public class HostCache {
 	}
 	
 	public HostCache( byte b[] ) {
-		this();
 		ByteBuffer wrapped = ByteBuffer.wrap( b );
 		hostId = wrapped.getInt();
+		nodes = new LRUCache< String, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 
 	
 	public String getKey() {
+		if( null == key ) {
+			key = NodeUtil.encoder.encodeToString( getBytes() );
+		}
 		return key;
 	}
 
@@ -59,6 +57,9 @@ public class HostCache {
 		return  ByteBuffer.allocate( HostCache.BYTES ).putInt( hostId ).array();
 	}	
 
+	public String[] getNodesKeys() {
+		return nodes.keySet().toArray( new String[0] );
+	}
 	
 	public void pruneNodes() {
 		LOG.info( "pruning hostId: " + hostId + " with size " + nodes.size() );
@@ -70,12 +71,12 @@ public class HostCache {
 				Map.Entry< String, NodeId > entry = itr.next();
 				NodeId node = entry.getValue();
 				
-				if( Settings.Frequency.collect < node.paths.size() ) {
-					LOG.info( "removing node: " + entry.getKey() + " with size:" + node.paths.size() + " num of saved paths:" + node.numSavedPath );
-			
+				if( node.getRecentFrequency() < Settings.Frequency.collect ) {
+					LOG.info( "removing node: " + entry.getKey() + " with freq:" + node.getFrequency() + " recent paths:" + node.getRecentFrequency() );
 					itr.remove();
 				}
 			}
+			
 			needPrune = false;
 		}
 		
@@ -87,26 +88,21 @@ public class HostCache {
 		String key = NodeId.makeKey( nodeXpath, nodeHash);
 		NodeId node = nodes.get( key );
 		if( null == node ) {
-			LOG.info( "adding new node key:" + key );
+			// LOG.debug( "adding new node key:" + key );
 			node = new NodeId( nodeXpath, nodeHash );
 			nodes.put( key, node );
 		}
 		
-		LOG.info( "adding new path hash:" + pathHash );
+		// LOG.debug( "adding new path hash:" + pathHash );
 		node.addPath( pathHash );
 		needPrune = needSave = true;
 		
-		return (int)( node.paths.size() + node.numSavedPath );
+		return node.getFrequency();
 	}
 	
-	public int readNode( String nodeXpath, Integer nodeHash ) {
-		int result = 0;
+	public NodeId getNode( String nodeXpath, Integer nodeHash ) {
 		String key = NodeId.makeKey( nodeXpath, nodeHash);
-		NodeId node = nodes.get( key );
-		if( null != node ) {
-			result = node.numSavedPath;
-		}
-		return result;
+		return  nodes.get( key );		
 	}
 	
 	@Override
@@ -118,17 +114,20 @@ public class HostCache {
 	@Override
 	public boolean equals( Object obj ) {
 		HostCache rhs = ( HostCache ) obj;
-		return hostId == rhs.hostId && key.equals( rhs.key );
+		return hostId == rhs.hostId 
+			&& key.equals( rhs.key )
+			&& nodes.size() == rhs.nodes.size()
+		;
 	}
 
 	@Override
 	public String toString() {
-		return "host:" + hostId + " key:" + key + " number of noes:" + nodes.size();
+		return "host:" + hostId + " key:" + key + " number of nodes:" + nodes.size() + " pruned:" + ( ! needPrune ) + " saved:" + ( ! needSave );
 	}
 	
 	// test
 	static public void main( String args[] ) {
-		HostCache id = new HostCache( "MjM0NTQ2" );
+		HostCache id = new HostCache( "0byeeQ" );
 		System.out.println( "node: " + id );
 		
 		HostCache id2 = new HostCache( id.getBytes() );

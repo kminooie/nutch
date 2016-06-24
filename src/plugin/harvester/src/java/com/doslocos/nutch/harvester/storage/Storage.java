@@ -140,14 +140,30 @@ public abstract class Storage {
 			LOG.info( "after learning gc is triggered, counter:" + pageLearnedCounter.intValue() );
 			pruneMainCache();				
 		}		
+
+		testSaveAndLoad();
 		
 		pageEnd( true );
 	}
 	
-	public void pageEnd( boolean learn ) {
+
+	public void testSaveAndLoad() {
+		//  begin test
+		LOG.info( "Begin Test" );
 		
+		saveHostInfo( hostCache );
+		HostCache test1 = loadHostInfo( new HostCache( hostHash ) );
+		HostCache test2 = loadHostInfo( new HostCache( hostCache.getKey() ) );
+		
+		LOG.info( "original:" + hostCache );
+		LOG.info( "test1:" + test1 );
+		LOG.info( "test2:" + test2 );
+		LOG.info( "original ?= 1 :" + hostCache.equals( test1 ) );
+		LOG.info( "original ?= 2 :" + hostCache.equals( test2 ) );
+		LOG.info( "1 ?= 2 :" + test1.equals( test2 ) );
+		// end test
 	}
-	
+
 
 	protected void finalize() {
 		System.err.println( "Storage finalize was called" );
@@ -155,9 +171,10 @@ public abstract class Storage {
 	}
 	
 	
+	abstract public void pageEnd( boolean learn );
+	
 	// can't be static because abstract, should lock over hostCache in question
 	abstract public HostCache loadHostInfo( HostCache hc );
-	
 	abstract public void saveHostInfo( HostCache hc );
 	
 }

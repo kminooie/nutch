@@ -21,13 +21,13 @@ public class NodeId {
 	static public final Logger LOG = LoggerFactory.getLogger( NodeId.class );
 	static public final int BYTES = 2 * Integer.BYTES;
 	static public final int NUM_PATHS = 128;
-	
-	public int xpathId, hash;
-	public String key; 
-	
+		
 	public final List<String> paths = Collections.synchronizedList( new ArrayList<String>( NUM_PATHS ) );
 	
-	public int numSavedPath = 0;
+	private int xpathId, hash;
+	private String key; 
+	private int numSavedPath = 0;
+	
 	
 	static public String makeKey( String nodeXpath, int nodeHash ) {
 		return NodeUtil.encoder.encodeToString( makeBytes( nodeXpath, nodeHash) );
@@ -36,11 +36,13 @@ public class NodeId {
 	static public byte[] makeBytes( String nodeXpath, int nodeHash ) {
 		return ByteBuffer.allocate( NodeId.BYTES ).putInt( nodeXpath.hashCode() ).putInt( nodeHash ).array();
 	}
-	
+
+
+
 	public NodeId( int xpathId, int hash ) {
 		this.xpathId = xpathId;
 		this.hash = hash;
-		this.key = NodeUtil.encoder.encodeToString( getBytes() );
+		// this.key = NodeUtil.encoder.encodeToString( getBytes() );
 	}
 
 	public NodeId( String xpath, int hash ) {
@@ -50,6 +52,7 @@ public class NodeId {
 	public NodeId( NodeId id ) {
 		xpathId = id.xpathId;
 		hash = id.hash;
+		key = id.key;
 		numSavedPath = id.numSavedPath;
 		synchronized ( id.paths ) {
 			paths.addAll( id.paths );
@@ -60,27 +63,47 @@ public class NodeId {
 		ByteBuffer wrapped = ByteBuffer.wrap( b );
 		xpathId = wrapped.getInt();
 		hash = wrapped.getInt();
-		key = NodeUtil.encoder.encodeToString( wrapped.array() );
+		// key = NodeUtil.encoder.encodeToString( wrapped.array() );
 	}
 	
 	public NodeId( String key ) {
 		this( NodeUtil.decoder.decode( key ) );
 		
-		if( this.key.equals( key ) ) {
-			LOG.info( "sanity passes." );
-		} else {
-			LOG.error( "sanity failes." );
-		}
+		// if( this.key.equals( key ) ) {
+		// 	LOG.info( "sanity passes." );
+		// } else {
+		// 	LOG.error( "sanity failes." );
+		// }
+		
+		this.key = key;
 	}
 
-	
+	public NodeId( int freq, String key ) {
+		this( key );
+		numSavedPath = freq;
+	}
+
+
 	public byte[] getBytes() {
 		return  ByteBuffer.allocate( NodeId.BYTES ).putInt( xpathId ).putInt( hash ).array();
 	}
 	
 	public String getKey() {
+		if( null == key ) {
+			LOG.debug( "key does not exist. generating ..." );
+			key = NodeUtil.encoder.encodeToString( getBytes() );
+		}
 		return key;
 	}
+
+	public int getFrequency() {
+		return numSavedPath + paths.size();
+	}
+
+	public int getRecentFrequency() {
+		return paths.size();
+	}
+
 
 	public boolean addPath( Integer pathId ) {
 		boolean result = false;
@@ -106,7 +129,7 @@ public class NodeId {
 
 	@Override
 	public String toString() {
-		return "xpath:" + xpathId + " hash:" + hash;
+		return "xpath:" + xpathId + " hash:" + hash + " key:" + getKey();
 	}
 	
 	

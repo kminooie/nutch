@@ -23,6 +23,7 @@ public class IndexingPart implements IndexingFilter {
 	private Harvester harvester;
 	
 	public IndexingPart() {
+		LOG.info( "instantiating Harvester" );
 		harvester = new Harvester();
 	}
 
@@ -30,8 +31,6 @@ public class IndexingPart implements IndexingFilter {
 	@Override
 	public NutchDocument filter(NutchDocument doc, Parse parse, Text url,
 			CrawlDatum datum, Inlinks inlinks) throws IndexingException  {
-
-		LOG.debug( "filter called with urt:" + url );
 
 		URL netUrl = null;
 		try {
@@ -51,10 +50,9 @@ public class IndexingPart implements IndexingFilter {
 			doc.removeField( val );
 		}
 
-		doc.removeField( Settings.IndexingPart.fieldName );
 		doc.add( Settings.IndexingPart.fieldName, textContent );
 
-		LOG.debug("new parsed text replaced with old one by harvester plug in for : "+url.toString());
+		LOG.debug( "filter finished for urt:" + url );
 
 		return doc;
 	}
@@ -64,7 +62,7 @@ public class IndexingPart implements IndexingFilter {
 		LOG.info( "setting configuration in IndexingFilter" );
 				
 		if( Settings.setConf( conf ) ) {
-			LOG.info( "instantiating Harvester" );
+			LOG.info( "Initializing Harvester" );
 			harvester.init();
 		}		
 	}

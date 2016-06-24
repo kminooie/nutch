@@ -38,7 +38,7 @@ public class Harvester {
 	}
 	
 	public boolean learn( String HTMLBody, String host, String path ) {
-		LOG.info( "start learning host: " + host + " path: " + path );
+		LOG.debug( "start learning host: " + host + " path: " + path );
 		boolean result = false;
 		Node pageNode = null;
 		Storage storage = getStorage( host, path );
@@ -57,9 +57,8 @@ public class Harvester {
 
 			updateNodes( storage, pageNode, "html/body" );
 
-			storage.pageEnd( true );
-
-			LOG.debug("learning function finish for : "+ host+path);
+			storage.learnEnd();
+			
 			result=true;
 		}catch( Exception e ){
 			LOG.error( "Exception while parsing host: " + host + " path: " + path, e );
@@ -138,7 +137,7 @@ public class Harvester {
 
 
 	private String filterNode( final Storage storage, final Node node, final String xpath ) {
-		int frequency = storage.hostCache.readNode( xpath, node.hashCode() );
+		int frequency = storage.hostCache.getNode( xpath, node.hashCode() ).getFrequency();
 		String content = "";
 
 		if( frequency < Settings.Frequency.write ) {

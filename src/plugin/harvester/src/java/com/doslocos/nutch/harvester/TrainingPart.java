@@ -24,6 +24,7 @@ public class TrainingPart implements HtmlParseFilter{
 
 
 	public TrainingPart() {
+		LOG.info( "instantiating Harvester" );
 		harvester = new Harvester();
 	}
 	
@@ -40,7 +41,6 @@ public class TrainingPart implements HtmlParseFilter{
 			String hostName = netUrl.getHost();
 
 			harvester.learn( HTMLBody, hostName, pathName );
-			LOG.debug("learning part finish for : " + hostName + pathName );
 			
 		} catch (MalformedURLException e) {
 			LOG.error("Error while training part in harvester plugin", e );
@@ -59,7 +59,7 @@ public class TrainingPart implements HtmlParseFilter{
 		LOG.info( "setConf of TrainingPart was called." );
 		
 		if( Settings.setConf( conf ) ) {
-			LOG.info( "instantiating Harvester" );
+			LOG.info( "Initializing Harvester" );
 			harvester.init();
 		}		
 	}
