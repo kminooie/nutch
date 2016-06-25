@@ -26,6 +26,8 @@ public class NodeUtil {
 //		"server,appserver,meta,link,timestamp,noscript,script,style,form,option,input,select,button,comment,#comment,#text,.hidden"
 //	;
 	
+	static private byte[] tempIntegerBuff = new byte[ Integer.BYTES ]; 
+	
 	public static Node parseDom( String page_content ) {
 		Document doc = Jsoup.parse( page_content );
 		doc.select( Settings.NodeUtil.removeList ).remove();
@@ -68,12 +70,13 @@ public class NodeUtil {
 		return str.hashCode();
 	}
 	
-	static public String stringToBase64( String str ) {
+	static public byte[] stringToBase64( String str ) {
 		return intToBase64( str.hashCode() );
 	}
 	
-	static public String intToBase64( Integer id ) {
-		return encoder.encodeToString( ByteBuffer.allocate( Integer.BYTES ).putInt( id ).array() );
+	static public synchronized byte[] intToBase64( Integer id ) {
+		ByteBuffer.wrap( tempIntegerBuff ).putInt( id );
+		return encoder.encode( tempIntegerBuff ); 
 	}
 
 }

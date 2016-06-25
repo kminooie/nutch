@@ -1,8 +1,6 @@
 package com.doslocos.nutch.harvester;
 
 import java.lang.reflect.Method;
-import java.util.Iterator;
-import java.util.Map;
 
 import org.jsoup.nodes.Node;
 
@@ -109,7 +107,7 @@ public class Harvester {
 */
 
 	private void updateNodes( final Storage storage, final Node node, final String xpath ) {
-		int val = storage.hostCache.addNode( xpath, node.hashCode(), storage.pathHash );
+		int val = storage.addNode( xpath, node.hashCode() );
 		if( val < Settings.Frequency.write ) {
 
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
@@ -167,26 +165,10 @@ public class Harvester {
 	}
 
 
-	protected void finalize() {
-		System.err.println( "Harvester finalize was called" );
-		LOG.info( "Harvester finalize was called." );
-	}
-
-
-
-	static public void dumpMainCache() {
-		for( Map.Entry< Integer, HostCache > entry: Storage.mainCache.entrySet() ) {
-			Integer hId = entry.getKey();
-			HostCache hostCache = entry.getValue();
-			
-			LOG.info( "hostId: " + hId );
-			for( Iterator< Map.Entry< String, NodeId > > itr = hostCache.nodes.entrySet().iterator(); itr.hasNext(); ) {
-				Map.Entry< String, NodeId > pageEntry = itr.next();
-				LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().paths.size() );
-			}
-		}
-	}
-
+//	protected void finalize() {
+//		System.err.println( "Harvester finalize was called" );
+//		LOG.info( "Harvester finalize was called." );
+//	}
 
 
 }

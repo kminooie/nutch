@@ -1,12 +1,14 @@
 package com.doslocos.nutch.harvester.storage;
 
 
-import java.util.Map;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.doslocos.nutch.util.BytesWrapper;
 import com.doslocos.nutch.util.NodeUtil;
+import com.doslocos.nutch.harvester.Harvester;
 import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.Settings;
@@ -21,24 +23,38 @@ public abstract class Storage {
 
 	static protected final AtomicInteger pageLearnedCounter = new AtomicInteger();
 	
-	static public ConcurrentHashMap< Integer, HostCache > mainCache;
+	// static public ConcurrentHashMap< Integer, HostCache > mainCache;
+	static public ConcurrentHashMap< BytesWrapper, HostCache > mainCache;
 	
 	// static private int cacheHit = 0, cacheMissed = 0;
 	
 	
-	public String host, path;
+	public final Integer hostHash, pathHash;
+	public final BytesWrapper hostKey, pathKey;
 
-	public Integer hostHash = 0, pathHash = 0;
+	public final HostCache hostCache; 
+
 	
-	public HostCache hostCache; 
 
+	static public void dumpMainCache() {
+		for( Map.Entry< BytesWrapper, HostCache > entry: mainCache.entrySet() ) {
+			BytesWrapper hId = entry.getKey();
+			HostCache hc = entry.getValue();
+			
+			LOG.info( "hostId: " + hId );
+			for( Iterator< Map.Entry< BytesWrapper, NodeId > > itr = hc.nodes.entrySet().iterator(); itr.hasNext(); ) {
+				Map.Entry< BytesWrapper, NodeId > pageEntry = itr.next();
+				Harvester.LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().paths.size() );
+			}
+		}
+	}
 	
 
 	static public void init() {
 
 		// prevent being set more than once
 		if( null == mainCache ) synchronized ( Storage.class ) {
-			if( null == mainCache ) mainCache = new ConcurrentHashMap< Integer, HostCache >( Settings.Cache.hosts_per_job );
+			if( null == mainCache ) mainCache = new ConcurrentHashMap< BytesWrapper, HostCache >( Settings.Cache.hosts_per_job );
 		} else {
 			LOG.warn( "Seems like Init was called more than once." );
 		}
@@ -59,78 +75,40 @@ public abstract class Storage {
 	}
 
 	
-	protected void pruneMainCache() {
-		for( Map.Entry< Integer, HostCache > entry: mainCache.entrySet() ) {
-			Integer hId = entry.getKey();
-			HostCache hc = entry.getValue();
-			
-			if( hc.needSave ) {
-				if( hc.needPrune ) {
-					LOG.info( "pruning hostId: " + hId + " with size " + hc.nodes.size() );
-					hc.pruneNodes();
-					LOG.info( "size after pruning: " + hc.nodes.size() );					
-				}
-				
-				saveHostInfo( hc );
-			}
-		}
-	}
-	
-	static protected void pruneMainCache2() {
-		for( Map.Entry< Integer, HostCache > entry: mainCache.entrySet() ) {
-			Integer hId = entry.getKey();
-			HostCache hostCache = entry.getValue();
-			
-			Storage.LOG.info( "pruning hostId: " + hId + " with size " + hostCache.nodes.size() );
-			
-			// Iterator< Map.Entry< PageNodeId, Set< Integer > > > itr = hostCache.getAll().iterator();
-			Iterator< Map.Entry< String, NodeId > > itr = hostCache.nodes.entrySet().iterator();			
-			
-			
-			while( itr.hasNext() ) {
-				Map.Entry< String, NodeId > pageEntry = itr.next();
-				if( pageEntry.getValue().paths.size() < Settings.Frequency.collect ) {
-					Storage.LOG.info( "removing node: " + pageEntry.getKey() + " with size:" + pageEntry.getValue().paths.size() );
-					itr.remove();
-				}				
-				
-			}
-			
-			LOG.info( "size after pruning: " + hostCache.nodes.size() );
-		}
-	} 
-
-
  	public Storage( String host, String path ) {
-		this.host = host;
 		hostHash = NodeUtil.stringToId( host );
+		hostKey = new BytesWrapper( NodeUtil.intToBase64( hostHash ) );
 
 		if ( null == path ){
 			path = "/" ;
 			LOG.debug("a path with null value change to / value");
-
 		}
-		this.path = path;
+
 		pathHash = NodeUtil.stringToId( path );
+		pathKey = new BytesWrapper( NodeUtil.intToBase64( pathHash ) );
 		
-		hostCache = loadHost( hostHash );
-		
+		hostCache = loadHost( hostKey, hostHash );		
 	}
 
-	public HostCache loadHost( Integer hostId ) {
-		HostCache hostCache = Storage.mainCache.get( hostId );
-		if( null == hostCache ) /*synchronized( Storage.mainCache ) */ {
+ 	public HostCache loadHost( final BytesWrapper key, final Integer hash ) {
+		HostCache hc = mainCache.get( key );
+		if( null == hc ) /*synchronized( mainCache ) */ {
 			// if( null == hostCache ) {
-				hostCache = loadHostInfo( new HostCache( hostId ) );
-				mainCache.put( hostId, hostCache );
-				LOG.info( "Loaded host: " + hostCache );
+				LOG.info( "loading host from storage" );
+			
+				hc = loadHostInfo( new HostCache( key, hash ) );
+				mainCache.put( key, hc );
+				
 			// }
 		}
-		return hostCache;
+		LOG.info( "got host: " + hc );
+		return hc;
 	}
 
-	
-
+ 	public int addNode( String nodeXpath, Integer nodeHash ) {
+ 		return hostCache.addNode( nodeXpath, nodeHash, pathKey.getBytes() );
+ 	}
+ 	
 	public void filterEnd() {
 		pageEnd( false );
 	}
@@ -149,32 +127,69 @@ public abstract class Storage {
 
 	public void testSaveAndLoad() {
 		//  begin test
+		
+		String tHostName = "www.2locos.com";
+		Integer tHostHash = NodeUtil.stringToId( tHostName );
+		BytesWrapper tHostKey = new BytesWrapper( NodeUtil.intToBase64( tHostHash ) );
+		
+		
+		HostCache h1 = new HostCache( tHostKey.getBytes() );
+		HostCache h2 = new HostCache( tHostKey, tHostHash );
+		
+		LOG.info( "h1 ?= h2 " + h1.equals( h2 ) );
+		LOG.info( "h2 ?= h1 " + h2.equals( h1 ) );
+		LOG.info( "h1 hash:" + h1.hashCode() );
+		LOG.info( "h2 hash:" + h2.hashCode() );
+		
 		LOG.info( "Begin Test" );
 		
 		saveHostInfo( hostCache );
-		HostCache test1 = loadHostInfo( new HostCache( hostHash ) );
-		HostCache test2 = loadHostInfo( new HostCache( hostCache.getKey( false ) ) );
+		HostCache test1 = loadHostInfo( new HostCache( hostKey, hostHash ) );
+		HostCache test2 = loadHostInfo( new HostCache( hostKey.getBytes() ) );
+		HostCache test3 = loadHostInfo( new HostCache( hostCache.getKey( false ), hostCache.hostHash ) );
 		
 		LOG.info( "original:" + hostCache );
 		LOG.info( "test1:" + test1 );
 		LOG.info( "test2:" + test2 );
+		LOG.info( "test3:" + test3 );
 		LOG.info( "original ?= 1 :" + hostCache.equals( test1 ) );
 		LOG.info( "original ?= 2 :" + hostCache.equals( test2 ) );
+		LOG.info( "original ?= 3 :" + hostCache.equals( test3 ) );
 		LOG.info( "1 ?= 2 :" + test1.equals( test2 ) );
+		LOG.info( "2 ?= 3 :" + test2.equals( test3 ) );
 		// end test
 	}
 
 
-	protected void finalize() {
-		System.err.println( "Storage finalize was called" );
-		LOG.info( "Storage finalize was called." );
-	}
+//	protected void finalize() {
+//		System.err.println( "Storage finalize was called" );
+//		LOG.info( "Storage finalize was called." );
+//	}
 	
+
+	protected void pruneMainCache() {
+		for( Map.Entry< BytesWrapper, HostCache > entry: mainCache.entrySet() ) {
+			BytesWrapper hId = entry.getKey();
+			HostCache hc = entry.getValue();
+			
+			if( hc.needSave ) {
+				if( hc.needPrune ) {
+					LOG.info( "pruning hostId: " + hId + " with size " + hc.nodes.size() );
+					hc.pruneNodes();
+					LOG.info( "size after pruning: " + hc.nodes.size() );					
+				}
+				
+				saveHostInfo( hc );
+			}
+		}
+	}
+
+
 	
 	abstract public void pageEnd( boolean learn );
 	
 	// can't be static because abstract, should lock over hostCache in question
 	abstract public HostCache loadHostInfo( HostCache hc );
 	abstract public void saveHostInfo( HostCache hc );
-	
+
 }

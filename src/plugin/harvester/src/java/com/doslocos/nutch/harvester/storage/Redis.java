@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.Settings;
+import com.doslocos.nutch.util.BytesWrapper;
 import com.doslocos.nutch.util.NodeUtil;
 
 import redis.clients.jedis.Jedis;
@@ -29,11 +30,11 @@ public class Redis extends Storage {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Redis.class );
 	static public final byte[] INITIAL_CURSOR = new String( "0" ).getBytes();
+	static public final byte[] SEPERATOR_bytes = Settings.Storage.SEPARATOR.getBytes();
 	
 	static private JedisPool pool;
 
 	private Jedis jedis;
-	private byte[] pathIdBytes; // = new byte[ Integer.BYTES ];
 	
 	
 	static public void init() {
@@ -118,8 +119,6 @@ public class Redis extends Storage {
 	
  	public Redis( String host, String path ) {
 		super( host, path );
-		ByteBuffer.wrap( pathIdBytes ).putInt( pathHash );
-		// pathIdBytes = NodeUtil.encoder.
 		initConnection();
 	}
 
@@ -137,8 +136,10 @@ public class Redis extends Storage {
 	
 		Pipeline p = jedis.pipelined();
 		byte[] cursor = INITIAL_CURSOR;
-		byte[] hostPostFix = hc.getKey( true ).getBytes();
-		LinkedHashMap< String, Response< Long > > nodes = new LinkedHashMap< String, Response< Long > >( 
+		BytesWrapper hostPostFix = hc.getKey( false );
+		LOG.debug( " SEPARATOR + HOST : " + hostPostFix );
+		
+		LinkedHashMap< BytesWrapper, Response< Long > > nodes = new LinkedHashMap< BytesWrapper, Response< Long > >( 
 				Settings.Cache.getInitialCapacity( Settings.Storage.Redis.bucketSize + 1 ),
 				Settings.Cache.load_factor
 			);
@@ -156,19 +157,21 @@ public class Redis extends Storage {
 				LOG.debug( "cursor is " + new String( cursor ) + " result has:" + nodeKeyList.size() );
 			}			
 				
-			for( byte[] nodeKey : nodeKeyList ) {
+			for( byte[] nodeByteKey : nodeKeyList ) {
 				
-				byte[] key = new byte[ nodeKey.length + hostPostFix.length ];
-				System.arraycopy( nodeKey, 0, key, 0, nodeKey.length);
-				System.arraycopy( hostPostFix, 0, key, nodeKey.length, hostPostFix.length);
+				BytesWrapper nodeKey = new BytesWrapper( nodeByteKey );
 				
-				nodes.put( new String( nodeKey ), p.scard( key ) );
+				// byte[] key = new byte[ nodeByteKey.length + hostPostFix.length ];
+				// System.arraycopy( nodeByteKey, 0, key, 0, nodeByteKey.length);
+				// System.arraycopy( hostPostFix, 0, key, nodeByteKey.length, hostPostFix.length);
+				
+				nodes.put( nodeKey, p.scard( nodeByteKey ) );
 			}
 			
 			LOG.info( "about to sync, number of nodes is:" + nodes.size() );
 			p.sync();
 			
-			for( Map.Entry<String, Response<Long>> e : nodes.entrySet() ) {
+			for( Map.Entry<BytesWrapper, Response<Long>> e : nodes.entrySet() ) {
 				NodeId nodeId = new NodeId( new Long( e.getValue().get() ).intValue(), e.getKey() );
 				if( ! e.getKey().equals( nodeId.getKey() ) ) {
 					LOG.error(" sanity failed." );
@@ -195,12 +198,13 @@ public class Redis extends Storage {
 		}
 		
 		Pipeline p = jedis.pipelined();
-		String hostPostFix = hc.getKey( true );
+		BytesWrapper hostPostFix = hc.getKey( false );
 
 		synchronized( hc ) {
-				
+			// TODO fix this	
 			// create host key	
-			p.sadd( hc.getKey( false ), hc.getNodesKeys() ); 
+			p.sadd( hostPostFix.getBytes(), hc.getNodesKeys() );
+			p.sadd(key, member)
 			p.sync();
 			
 			int writeCounter = 0;
@@ -238,18 +242,19 @@ public class Redis extends Storage {
 
 	@Override
 	protected void finalize(){
-		System.err.println( "Redis finalize was called." );
-		LOG.info( "Redis finalize was called." );
+		// System.err.println( "Redis finalize was called." );
+		// LOG.info( "Redis finalize was called." );
+		
 		if( null != jedis ) {
 			try {
 				jedis.close();
 			} catch ( Exception e ) {
-				LOG.error( "Exception whild closing the jedis connection.", e );
+				// LOG.error( "Exception whild closing the jedis connection.", e );
 			}
 			jedis = null;
 		}
 
-		super.finalize();
+		// super.finalize();
 	}
 	
 

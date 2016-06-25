@@ -7,34 +7,45 @@ package com.doslocos.nutch.harvester;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.ArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-
+import com.doslocos.nutch.util.BytesWrapper;
 import com.doslocos.nutch.util.NodeUtil;
+
 
 public class NodeId {
 
 	static public final Logger LOG = LoggerFactory.getLogger( NodeId.class );
 	static public final int BYTES = 2 * Integer.BYTES;
 	static public final int NUM_PATHS = 128;
-		
-	public final List<String> paths = Collections.synchronizedList( new ArrayList<String>( NUM_PATHS ) );
+	
+	static private final byte[] tempKeyBuff = new byte[ NodeId.BYTES ];
+	
+	// public final List< byte[] > paths = Collections.synchronizedList( new ArrayList< byte[] >( NUM_PATHS ) );
+	public final List< byte[] > paths = new ArrayList< byte[] >( NUM_PATHS );
+	
 	
 	private int xpathId, hash;
 	private String key; 
 	private int numSavedPath = 0;
 	
 	
-	static public String makeKey( String nodeXpath, int nodeHash ) {
-		return NodeUtil.encoder.encodeToString( makeBytes( nodeXpath, nodeHash) );
+	static public String makeStringKey( String nodeXpath, int nodeHash ) {
+		return NodeUtil.encoder.encodeToString( makeByteArrayId( nodeXpath, nodeHash) );		
 	}
 	
-	static public byte[] makeBytes( String nodeXpath, int nodeHash ) {
-		return ByteBuffer.allocate( NodeId.BYTES ).putInt( nodeXpath.hashCode() ).putInt( nodeHash ).array();
+	static public BytesWrapper makeBytesKey( String nodeXpath, int nodeHash ) {
+		synchronized( tempKeyBuff ) {
+			ByteBuffer.wrap( tempKeyBuff ).putInt( NodeUtil.stringToId( nodeXpath ) ).putInt( nodeHash );
+			return new BytesWrapper( NodeUtil.encoder.encode( tempKeyBuff ) );
+		}
+	}
+	
+	static public byte[] makeByteArrayId( String nodeXpath, int nodeHash ) {
+		return ByteBuffer.allocate( NodeId.BYTES ).putInt( NodeUtil.stringToId( nodeXpath ) ).putInt( nodeHash ).array();
 	}
 
 
@@ -83,6 +94,10 @@ public class NodeId {
 		numSavedPath = freq;
 	}
 
+	public NodeId( int freq, BytesWrapper key ) {
+		this( key.getBytes() );
+		numSavedPath = freq;
+	}
 
 	public byte[] getBytes() {
 		return  ByteBuffer.allocate( NodeId.BYTES ).putInt( xpathId ).putInt( hash ).array();
@@ -96,9 +111,12 @@ public class NodeId {
 		return key;
 	}
 
-	public ArrayList<String> getPathsKeys() {
+	/**
+	 * should be only used for saving as they discard the internal information
+	 */
+	public ArrayList< byte[] > getPathsKeys() {
 		
-		ArrayList<String> result = new ArrayList<String>( paths.size() );
+		ArrayList< byte[] > result = new ArrayList< byte[] >( paths.size() );
 		
 		synchronized( paths ) {
 			result.addAll( paths );
@@ -109,6 +127,9 @@ public class NodeId {
 		return result;
 	}
 	
+	/**
+	 * should be only used for saving as they discard the internal information
+	 */
 	public String[] getPathsKeysStrings() {
 		String[] result;
 		
@@ -130,11 +151,11 @@ public class NodeId {
 	}
 
 
-	public boolean addPath( Integer pathId ) {
+	public boolean addPath( byte[] path ) {
 		boolean result = false;
 		
 		if( numSavedPath < Settings.Frequency.max ) {
-			result =  paths.add( NodeUtil.intToBase64( pathId ) );
+			result =  paths.add( path );
 		}
 
 		return result;
