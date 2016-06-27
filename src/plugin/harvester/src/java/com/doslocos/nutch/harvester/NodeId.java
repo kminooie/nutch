@@ -141,6 +141,19 @@ public class NodeId {
 
 		return result;
 	}
+	
+	public byte[][] getPathsKeysByteArr() {
+		byte[][] result = null;
+		
+		synchronized( paths ) {
+			// result = new byte[paths.size()][];
+			result =  paths.toArray( result );
+			paths.clear();
+			numSavedPath += result.length;
+		}
+
+		return result;
+	}
 
 	public int getFrequency() {
 		return numSavedPath + paths.size();

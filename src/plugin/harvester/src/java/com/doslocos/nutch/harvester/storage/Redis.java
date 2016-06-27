@@ -203,21 +203,24 @@ public class Redis extends Storage {
 		synchronized( hc ) {
 			// TODO fix this	
 			// create host key	
-			p.sadd( hostPostFix.getBytes(), hc.getNodesKeys() );
-			p.sadd(key, member)
+			// adding while iterating over nodes, moved into the loop
+			//p.sadd( hostPostFix.getBytes(), hc.getNodesKeys() );
+
 			p.sync();
 			
 			int writeCounter = 0;
 			
-			for( Map.Entry< String, NodeId > node : hc.nodes.entrySet() ) {
+			for( Map.Entry< BytesWrapper, NodeId > node : hc.nodes.entrySet() ) {
 				int recentFrequency = node.getValue().getRecentFrequency(); 
 				int oldFrequency = node.getValue().getFrequency() - recentFrequency;
 				
 				if( recentFrequency > Settings.Frequency.write ) {
-					String[] pathsKeys = node.getValue().getPathsKeysStrings();
+					// String[] pathsKeys = node.getValue().getPathsKeysStrings();
 					
 					if( oldFrequency < Settings.Frequency.max ) {
-						p.sadd( node.getKey() + hostPostFix, pathsKeys );						
+						// ignoring host postfix // + hostPostFix
+						p.sadd( hostPostFix.getBytes(), node.getKey().getBytes() );
+						p.sadd( node.getKey().getBytes(), node.getValue().getPathsKeysByteArr() );						
 						++writeCounter; // += recentFrequency;
 					} else {
 						LOG.warn( "throwing out paths of populor node:" + node.getKey() );
