@@ -2,6 +2,7 @@ package com.doslocos.nutch.harvester.storage;
 
 
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -78,7 +79,7 @@ public abstract class Storage {
 	
  	public Storage( String host, String path ) {
 		hostHash = NodeUtil.stringToId( host );
-		hostKey = new BytesWrapper( NodeUtil.intToBase64( hostHash ) );
+		hostKey = new BytesWrapper( NodeUtil.intToB64Bytes( hostHash ) );
 
 		if ( null == path ){
 			path = "/" ;
@@ -86,7 +87,7 @@ public abstract class Storage {
 		}
 
 		pathHash = NodeUtil.stringToId( path );
-		pathKey = new BytesWrapper( NodeUtil.intToBase64( pathHash ) );
+		pathKey = new BytesWrapper( NodeUtil.intToB64Bytes( pathHash ) );
 		
 		hostCache = loadHost( hostKey, hostHash );		
 	}
@@ -134,13 +135,15 @@ public abstract class Storage {
 		LOG.info( "test host:" + tHostName );
 		Integer tHostHash = NodeUtil.stringToId( tHostName );
 		LOG.info( "test host hash:" + tHostHash );
-		BytesWrapper tHostKey = new BytesWrapper( NodeUtil.intToBase64( tHostHash ) );
+		BytesWrapper tHostKey = new BytesWrapper( NodeUtil.intToB64Bytes( tHostHash ) );
 		
 		byte[] tempIntegerBuff = new byte[ Integer.BYTES * 2 ];
 		
 		NodeUtil.decoder.decode( tHostKey.getBytes(), tempIntegerBuff );
 		int tHostHash2 = ByteBuffer.wrap( tempIntegerBuff ).getInt( );
 		LOG.info( "test host hash2:" + tHostHash2 );
+		IntBuffer ib = ByteBuffer.wrap( tempIntegerBuff ).asIntBuffer();
+		LOG.info( "test host hash2:" + ib );
 		
 		HostCache h1 = new HostCache( tHostKey.getBytes() );
 		LOG.info( "h1:" + h1 );

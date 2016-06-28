@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.Settings;
-import com.doslocos.nutch.util.BytesWrapper;
+import com.doslocos.nutch.util.BBWrapper;
 import com.doslocos.nutch.util.NodeUtil;
 
 import redis.clients.jedis.Jedis;
@@ -136,10 +136,10 @@ public class Redis extends Storage {
 	
 		Pipeline p = jedis.pipelined();
 		byte[] cursor = INITIAL_CURSOR;
-		BytesWrapper hostPostFix = hc.getKey( false );
+		BBWrapper hostPostFix = hc.getKey( false );
 		LOG.debug( " SEPARATOR + HOST : " + hostPostFix );
 		
-		LinkedHashMap< BytesWrapper, Response< Long > > nodes = new LinkedHashMap< BytesWrapper, Response< Long > >( 
+		LinkedHashMap< BBWrapper, Response< Long > > nodes = new LinkedHashMap< BBWrapper, Response< Long > >( 
 				Settings.Cache.getInitialCapacity( Settings.Storage.Redis.bucketSize + 1 ),
 				Settings.Cache.load_factor
 			);
@@ -159,7 +159,7 @@ public class Redis extends Storage {
 				
 			for( byte[] nodeByteKey : nodeKeyList ) {
 				
-				BytesWrapper nodeKey = new BytesWrapper( nodeByteKey );
+				BBWrapper nodeKey = new BBWrapper( nodeByteKey );
 				
 				// byte[] key = new byte[ nodeByteKey.length + hostPostFix.length ];
 				// System.arraycopy( nodeByteKey, 0, key, 0, nodeByteKey.length);
@@ -171,7 +171,7 @@ public class Redis extends Storage {
 			LOG.info( "about to sync, number of nodes is:" + nodes.size() );
 			p.sync();
 			
-			for( Map.Entry<BytesWrapper, Response<Long>> e : nodes.entrySet() ) {
+			for( Map.Entry<BBWrapper, Response<Long>> e : nodes.entrySet() ) {
 				NodeId nodeId = new NodeId( new Long( e.getValue().get() ).intValue(), e.getKey() );
 				if( ! e.getKey().equals( nodeId.getKey() ) ) {
 					LOG.error(" sanity failed." );
@@ -198,7 +198,7 @@ public class Redis extends Storage {
 		}
 		
 		Pipeline p = jedis.pipelined();
-		BytesWrapper hostPostFix = hc.getKey( false );
+		BBWrapper hostPostFix = hc.getKey( false );
 
 		synchronized( hc ) {
 			// TODO fix this	
@@ -210,7 +210,7 @@ public class Redis extends Storage {
 			
 			int writeCounter = 0;
 			
-			for( Map.Entry< BytesWrapper, NodeId > node : hc.nodes.entrySet() ) {
+			for( Map.Entry< BBWrapper, NodeId > node : hc.nodes.entrySet() ) {
 				int recentFrequency = node.getValue().getRecentFrequency(); 
 				int oldFrequency = node.getValue().getFrequency() - recentFrequency;
 				

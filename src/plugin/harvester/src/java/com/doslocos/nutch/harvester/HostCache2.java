@@ -6,7 +6,6 @@
 package com.doslocos.nutch.harvester;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -17,19 +16,18 @@ import com.doslocos.nutch.util.BytesWrapper;
 import com.doslocos.nutch.util.LRUCache;
 
 
-public class HostCache {
+public class HostCache2 {
 
-	static public final Logger LOG = LoggerFactory.getLogger( HostCache.class );
+	static public final Logger LOG = LoggerFactory.getLogger( HostCache2.class );
 	static public final int BYTES = Integer.BYTES ;// + NodeId.BYTES;
 	
-	private final ByteBuffer hostKey;
 	
-	private Integer hostHash;
-	//private final byte[] hostKey;
+	public final Integer hostHash;
+	private final BytesWrapper hostKey;
 	
 	public boolean needPrune = false, needSave = false;
 	
-	public final LRUCache< ByteBuffer, NodeId > nodes;
+	public final LRUCache< BytesWrapper, NodeId > nodes;
 
 	/*	
 	public HostCache( Integer hostId ) {
@@ -43,15 +41,20 @@ public class HostCache {
 	}
 	*/
 	
-	public HostCache( byte[] bytes, Integer hash ) {
-		this( bytes );
+	public HostCache2( BytesWrapper bytes, Integer hash ) {
+		hostKey = bytes;
 		hostHash = hash;
+
+		nodes = new LRUCache< BytesWrapper, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 	
 	
-	public HostCache( byte[] bytes ) {
-		hostKey = ByteBuffer.wrap( bytes );        
-		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
+	public HostCache2( byte[] bs ) {
+		hostKey = new BytesWrapper( bs );
+		ByteBuffer wrapped = ByteBuffer.wrap( bs );
+		hostHash = wrapped.getInt();
+		
+		nodes = new LRUCache< BytesWrapper, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 
 	
@@ -64,7 +67,7 @@ public class HostCache {
 	}
 
 	public byte[] getBytes() {
-		return  ByteBuffer.allocate( HostCache.BYTES ).putInt( hostHash ).array();
+		return  ByteBuffer.allocate( HostCache2.BYTES ).putInt( hostHash ).array();
 	}	
 
 	public String[] getNodesKeys() {
@@ -122,7 +125,7 @@ public class HostCache {
 
 	@Override
 	public boolean equals( Object obj ) {
-		return obj instanceof HostCache && ( (HostCache)obj ).hostHash == hostHash;
+		return obj instanceof HostCache2 && ( (HostCache2)obj ).hostHash == hostHash;
 	}
 
 	@Override
@@ -132,10 +135,10 @@ public class HostCache {
 	
 	// test
 	static public void main( String args[] ) {
-		HostCache id = new HostCache( "0byeeQ".getBytes() );
+		HostCache2 id = new HostCache2( "0byeeQ".getBytes() );
 		System.out.println( "node: " + id );
 		
-		HostCache id2 = new HostCache( id.getBytes() );
+		HostCache2 id2 = new HostCache2( id.getBytes() );
 		System.out.println( "node2: " + id2 );
 		
 		if( id.hashCode() == id2.hashCode() ) {

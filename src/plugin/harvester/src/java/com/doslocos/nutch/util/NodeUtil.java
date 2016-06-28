@@ -75,10 +75,10 @@ public class NodeUtil {
 	}
 	
 	static public byte[] stringToBase64( String str ) {
-		return intToBase64( str.hashCode() );
+		return intToB64Bytes( str.hashCode() );
 	}
 	
-	static public synchronized byte[] intToBase64( Integer id ) {
+	static public synchronized byte[] intToB64Bytes( Integer id ) {
 		LOG.info( "got integer:" + id );
 		LOG.info( "buffer:" + new String( tempIntegerBuff ) );
 		ByteBuffer.wrap( tempIntegerBuff ).putInt( id );
@@ -91,4 +91,21 @@ public class NodeUtil {
 		return  r;
 	}
 
+	static public ByteBuffer intToB64BBuffer( int id ) {
+		ByteBuffer tempBuff = ByteBuffer.allocate( Integer.BYTES ).putInt( 0, id );
+		return ByteBuffer.wrap( encoder.encode( tempBuff.array() ) );
+	}
+	
+	static public ByteBuffer intArrToB64BBuffer( int[] id ) {
+		ByteBuffer tempBuff = ByteBuffer.allocate( id.length * Integer.BYTES );
+		for( int i : id ) {
+			tempBuff.putInt( i );
+		}
+		return ByteBuffer.wrap( encoder.encode( tempBuff.array() ) );
+	}
+	
+	static public int b64BBufferToInt( ByteBuffer b ) {
+		return ByteBuffer.wrap( decoder.decode( b.array() ) ).getInt();
+	}
+	
 }
