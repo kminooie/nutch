@@ -128,7 +128,8 @@ public class Mariadb extends Storage {
 		LOG.debug("Connection class created");
 	}
 
-	
+
+/*
 	public void addToBackendList( NodeId id ) {
 
 
@@ -147,14 +148,14 @@ public class Mariadb extends Storage {
 
 		// if( 0 == newNodes % writeBSize ) updateDB();
 	}
-
+*/
 
 	@Override
 	public void pageEnd( boolean learn ){
 
 		updateDB();
 		
-		super.pageEnd( learn );
+		
 
 		try {
 			conn.commit();
@@ -170,6 +171,7 @@ public class Mariadb extends Storage {
 	}
 
 
+/*
 	
 	public void incNodeFreq( NodeId id) {
 		int writeBSize = 2; // added so I can compile
@@ -210,7 +212,7 @@ public class Mariadb extends Storage {
 		if( 0 == newNodes % writeBSize ) updateDB();
 
 	}
-
+*/
 
 	protected void updateDB( ) {
 		conn = checkConnection( conn );
@@ -297,9 +299,9 @@ public class Mariadb extends Storage {
 			//int c = 0;
 			while( rs.next() ) {
 				//++c;
-				int nid = rs.getInt( "node_id" );
-				NodeId pid = new NodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
-				int fq = rs.getInt( "fq" );
+//				int nid = rs.getInt( "node_id" );
+//				NodeId pid = new NodeId( rs.getInt( "xpath_id" ), rs.getInt( "hash" ) );
+//				int fq = rs.getInt( "fq" );
 
 				// NodeValue val = new NodeValue( fq, nid);
 				// map.put( pid, val );
@@ -352,7 +354,7 @@ public class Mariadb extends Storage {
 
 	@Override
 	public HostCache loadHostInfo( HostCache hostCache ) {
-		return new HostCache("nohost" );
+		return new HostCache( "nohost".getBytes() );
 	}
 
 	@Override
@@ -360,7 +362,7 @@ public class Mariadb extends Storage {
 		
 	}
 	
-	
+/*	
 	@Override
 	protected void finalize(){
 		System.out.println( "mariadb finalize was called." );
@@ -373,9 +375,9 @@ public class Mariadb extends Storage {
 			}
 			conn = null;
 		}
-		super.finalize();
+		// super.finalize();
 	}
-
+*/
 
 }
 

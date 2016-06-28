@@ -191,6 +191,10 @@ public class NodeId {
 		return "xpath:" + xpathId + " hash:" + hash + " key:" + getKey();
 	}
 	
+	/**
+	 * java -cp  $( for i in $( ls /2locos/kaveh/nutch/nutch/build/lib/*.jar /2locos/kaveh/nutch/nutch/build/plugins/harvester/*.jar ); do echo -n $i:; done; ). com.doslocos.nutch.harvester.NodeId
+	 * @param args
+	 */
 	
 	// test
 	static public void main( String args[] ) {

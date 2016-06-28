@@ -50,9 +50,9 @@ public class HostCache {
 	
 	
 	public HostCache( byte[] bs ) {
+		hostKey = new BytesWrapper( bs );
 		ByteBuffer wrapped = ByteBuffer.wrap( bs );
 		hostHash = wrapped.getInt();
-		hostKey = new BytesWrapper( bs );
 		
 		nodes = new LRUCache< BytesWrapper, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}

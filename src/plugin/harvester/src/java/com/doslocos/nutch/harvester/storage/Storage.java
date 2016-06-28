@@ -1,6 +1,7 @@
 package com.doslocos.nutch.harvester.storage;
 
 
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -128,13 +129,24 @@ public abstract class Storage {
 	public void testSaveAndLoad() {
 		//  begin test
 		
+		LOG.info( "begin test");
 		String tHostName = "www.2locos.com";
+		LOG.info( "test host:" + tHostName );
 		Integer tHostHash = NodeUtil.stringToId( tHostName );
+		LOG.info( "test host hash:" + tHostHash );
 		BytesWrapper tHostKey = new BytesWrapper( NodeUtil.intToBase64( tHostHash ) );
 		
+		byte[] tempIntegerBuff = new byte[ Integer.BYTES * 2 ];
+		
+		NodeUtil.decoder.decode( tHostKey.getBytes(), tempIntegerBuff );
+		int tHostHash2 = ByteBuffer.wrap( tempIntegerBuff ).getInt( );
+		LOG.info( "test host hash2:" + tHostHash2 );
 		
 		HostCache h1 = new HostCache( tHostKey.getBytes() );
+		LOG.info( "h1:" + h1 );
+		
 		HostCache h2 = new HostCache( tHostKey, tHostHash );
+		LOG.info( "h2:" + h2 );
 		
 		LOG.info( "h1 ?= h2 " + h1.equals( h2 ) );
 		LOG.info( "h2 ?= h1 " + h2.equals( h1 ) );
@@ -144,7 +156,9 @@ public abstract class Storage {
 		LOG.info( "Begin Test" );
 		
 		saveHostInfo( hostCache );
+		LOG.info( "before test1, hostKey:" + hostKey );
 		HostCache test1 = loadHostInfo( new HostCache( hostKey, hostHash ) );
+		LOG.info( "before test2, hostKey:" + hostKey );
 		HostCache test2 = loadHostInfo( new HostCache( hostKey.getBytes() ) );
 		HostCache test3 = loadHostInfo( new HostCache( hostCache.getKey( false ), hostCache.hostHash ) );
 		

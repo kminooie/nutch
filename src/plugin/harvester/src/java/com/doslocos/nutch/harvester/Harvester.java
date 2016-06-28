@@ -135,7 +135,8 @@ public class Harvester {
 
 
 	private String filterNode( final Storage storage, final Node node, final String xpath ) {
-		int frequency = storage.hostCache.getNode( xpath, node.hashCode() ).getFrequency();
+		NodeId nid = storage.hostCache.getNode( xpath, node.hashCode() );
+		int frequency = ( null == nid ? 0 : nid.getFrequency() );
 		String content = "";
 
 		if( frequency < Settings.Frequency.write ) {

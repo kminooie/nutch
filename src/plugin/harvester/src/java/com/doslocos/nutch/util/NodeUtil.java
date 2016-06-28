@@ -13,14 +13,18 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 
-import com.doslocos.nutch.harvester.NodeId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.doslocos.nutch.harvester.Settings;
+import com.doslocos.nutch.harvester.storage.Storage;
 
 
 public class NodeUtil {
 
 	static public final Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
 	static public final Base64.Decoder decoder = Base64.getDecoder();
+	static public final Logger LOG = LoggerFactory.getLogger( Storage.class );
 	
 //	public static String removeList =
 //		"server,appserver,meta,link,timestamp,noscript,script,style,form,option,input,select,button,comment,#comment,#text,.hidden"
@@ -75,8 +79,16 @@ public class NodeUtil {
 	}
 	
 	static public synchronized byte[] intToBase64( Integer id ) {
+		LOG.info( "got integer:" + id );
+		LOG.info( "buffer:" + new String( tempIntegerBuff ) );
 		ByteBuffer.wrap( tempIntegerBuff ).putInt( id );
-		return encoder.encode( tempIntegerBuff ); 
+		
+		LOG.info( "buffer:" + new String( tempIntegerBuff ) );
+		
+		byte[] r = encoder.encode( tempIntegerBuff ); 
+		LOG.info( "returning " + new String( r ) );
+		
+		return  r;
 	}
 
 }
