@@ -23,7 +23,6 @@ public class HostCache {
 	
 	private final ByteBuffer hostKey;
 	
-	// TOSO: use actual int
 	private Integer hostHash;
 	//private final byte[] hostKey;
 	
@@ -67,7 +66,7 @@ public class HostCache {
 		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 
-	public ByteBuffer getKey( boolean prefix ) {
+	public ByteBuffer getB64Key( boolean prefix ) {
 //		if( prefix ) {
 //			return new BytesWrapper( (new BytesWrapper( Settings.Storage.SEPARATOR.getBytes() ).concat( hostKey ) ) );			
 //		} else {
@@ -77,6 +76,11 @@ public class HostCache {
 		hostKey.clear();
 		return hostKey;
 	}
+
+	public Integer getKey() {
+		return hostHash;
+	}
+
 
 //	public byte[] getBytes() {
 //		return  ByteBuffer.allocate( HostCache.BYTES ).putInt( hostHash ).array();
@@ -143,7 +147,8 @@ public class HostCache {
 
 	@Override
 	public String toString() {
-		return "host:" + hostHash + " key:" + hostKey + " number of nodes:" + nodes.size() + " pruned:" + ( ! needPrune ) + " saved:" + ( ! needSave );
+		return "host:" + hostHash + " key:" + hostKey + " with value:" + new String( hostKey.array() ) 
+			+ " number of nodes:" + nodes.size() + " pruned:" + ( ! needPrune ) + " saved:" + ( ! needSave );
 	}
 	
 	// test
@@ -161,5 +166,7 @@ public class HostCache {
 		if( id.equals( id2 ) ) {
 			System.out.println( "equals passed" );			
 		}
+
 	}
+
 }

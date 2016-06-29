@@ -136,7 +136,7 @@ public class Redis extends Storage {
 	
 		Pipeline p = jedis.pipelined();
 		byte[] cursor = INITIAL_CURSOR;
-		ByteBuffer hostPostFix = hc.getKey( false );
+		ByteBuffer hostPostFix = hc.getB64Key( false );
 		LOG.debug( " SEPARATOR + HOST : " + hostPostFix );
 		
 		LinkedHashMap< ByteBuffer, Response< Long > > nodes = new LinkedHashMap< ByteBuffer, Response< Long > >( 
@@ -146,7 +146,7 @@ public class Redis extends Storage {
 		
 		do {
 			// get the list of nodes for the given host
-			ScanResult<byte[]> scanResult = jedis.sscan( hc.getKey( false ).array(), cursor, Settings.Storage.Redis.scanParams );
+			ScanResult<byte[]> scanResult = jedis.sscan( hostPostFix.array(), cursor, Settings.Storage.Redis.scanParams );
 
 			nodes.clear();
 			
@@ -198,7 +198,7 @@ public class Redis extends Storage {
 		}
 		
 		Pipeline p = jedis.pipelined();
-		ByteBuffer hostPostFix = hc.getKey( false );
+		ByteBuffer hostPostFix = hc.getB64Key( false );
 
 		synchronized( hc ) {
 			// TODO fix this	

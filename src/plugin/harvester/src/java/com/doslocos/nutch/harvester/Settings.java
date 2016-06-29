@@ -91,6 +91,7 @@ public class Settings {
 
 		static public final String SEPARATOR = ":";
 		static public String connClassName;
+		static public String testHost = "redis.io";
 
 
 		static public class Redis {

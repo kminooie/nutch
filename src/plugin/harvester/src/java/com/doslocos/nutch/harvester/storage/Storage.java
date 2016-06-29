@@ -119,7 +119,16 @@ public abstract class Storage {
 			pruneMainCache();				
 		}		
 
-		testSaveAndLoad();
+		// run the test at the end of learning
+		if( null != Settings.Storage.testHost ) {
+			synchronized( Settings.Storage.class ) {
+				if( null != Settings.Storage.testHost ) {
+					Settings.Storage.testHost = null;
+					testSaveAndLoad();
+				}
+			}
+		}
+		
 		
 		pageEnd( true );
 	}
@@ -129,7 +138,7 @@ public abstract class Storage {
 		//  begin test
 		
 		LOG.info( "begin test");
-		String tHostName = "www.2locos.com";
+		String tHostName = "redis.io";
 		LOG.info( "test host:" + tHostName );
 		Integer tHostHash = NodeUtil.stringToId( tHostName );
 		LOG.info( "test host hash:" + tHostHash );
@@ -147,7 +156,7 @@ public abstract class Storage {
 		
 		
 		HostCache h0 = new HostCache( tHostKey.array() );
-		LOG.info( "h1:" + h0 );
+		LOG.info( "h0:" + h0 );
 				
 		HostCache h1 = new HostCache( tHostKey );
 		LOG.info( "h1:" + h1 );
@@ -163,20 +172,20 @@ public abstract class Storage {
 		
 		LOG.info( "Begin Test" );
 		
-		saveHostInfo( hostCache );
-		LOG.info( "before test1, hostHash:" + hostHash );
-		HostCache test1 = loadHostInfo( new HostCache( hostHash ) );
-		LOG.info( "before test2, hostKey:" + this );
-		HostCache test2 = loadHostInfo( new HostCache( hostCache.getKey( false ).array() ) );
-		HostCache test3 = loadHostInfo( new HostCache( hostCache.getKey( false ) ) );
+		saveHostInfo( h0 );
+		LOG.info( "before test1, hostHash:" + tHostHash );
+		HostCache test1 = loadHostInfo( new HostCache( tHostHash ) );
+		LOG.info( "before test2, hostKey:" + tHostKey + "with value:" + new String( tHostKey.array() ) );
+		HostCache test2 = loadHostInfo( new HostCache( h0.getB64Key( false ).array() ) );
+		HostCache test3 = loadHostInfo( new HostCache( h0.getB64Key( false ) ) );
 		
-		LOG.info( "original:" + hostCache );
+		LOG.info( "original:" + h0 );
 		LOG.info( "test1:" + test1 );
 		LOG.info( "test2:" + test2 );
 		LOG.info( "test3:" + test3 );
-		LOG.info( "original ?= 1 :" + hostCache.equals( test1 ) );
-		LOG.info( "original ?= 2 :" + hostCache.equals( test2 ) );
-		LOG.info( "original ?= 3 :" + hostCache.equals( test3 ) );
+		LOG.info( "original ?= 1 :" + h0.equals( test1 ) );
+		LOG.info( "original ?= 2 :" + h0.equals( test2 ) );
+		LOG.info( "original ?= 3 :" + h0.equals( test3 ) );
 		LOG.info( "1 ?= 2 :" + test1.equals( test2 ) );
 		LOG.info( "2 ?= 3 :" + test2.equals( test3 ) );
 		// end test
