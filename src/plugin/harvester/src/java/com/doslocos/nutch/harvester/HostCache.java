@@ -6,15 +6,14 @@
 package com.doslocos.nutch.harvester;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.Iterator;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.doslocos.nutch.util.BytesWrapper;
 import com.doslocos.nutch.util.LRUCache;
+import com.doslocos.nutch.util.NodeUtil;
 
 
 public class HostCache {
@@ -24,6 +23,7 @@ public class HostCache {
 	
 	private final ByteBuffer hostKey;
 	
+	// TOSO: use actual int
 	private Integer hostHash;
 	//private final byte[] hostKey;
 	
@@ -43,29 +43,44 @@ public class HostCache {
 	}
 	*/
 	
-	public HostCache( byte[] bytes, Integer hash ) {
-		this( bytes );
+	
+	
+	public HostCache( Integer hash ) {
 		hostHash = hash;
+		hostKey = NodeUtil.intToB64BBuffer( hostHash );
+		
+		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 	
 	
 	public HostCache( byte[] bytes ) {
-		hostKey = ByteBuffer.wrap( bytes );        
+		hostKey = ByteBuffer.wrap( bytes );
+		hostHash = NodeUtil.b64BBufferToInt( hostKey );
+		
+		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
+	}
+	
+	public HostCache( ByteBuffer bytes ) {
+		hostKey = bytes;
+		hostHash = NodeUtil.b64BBufferToInt( hostKey );
+		
 		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 
-	
-	public BytesWrapper getKey( boolean prefix ) {
-		if( prefix ) {
-			return new BytesWrapper( (new BytesWrapper( Settings.Storage.SEPARATOR.getBytes() ).concat( hostKey ) ) );			
-		} else {
-			return hostKey;
-		}		
+	public ByteBuffer getKey( boolean prefix ) {
+//		if( prefix ) {
+//			return new BytesWrapper( (new BytesWrapper( Settings.Storage.SEPARATOR.getBytes() ).concat( hostKey ) ) );			
+//		} else {
+//			return hostKey;
+//		}
+		
+		hostKey.clear();
+		return hostKey;
 	}
 
-	public byte[] getBytes() {
-		return  ByteBuffer.allocate( HostCache.BYTES ).putInt( hostHash ).array();
-	}	
+//	public byte[] getBytes() {
+//		return  ByteBuffer.allocate( HostCache.BYTES ).putInt( hostHash ).array();
+//	}	
 
 	public String[] getNodesKeys() {
 		return nodes.keySet().toArray( new String[0] );
@@ -75,10 +90,10 @@ public class HostCache {
 		LOG.info( "pruning hostId: " + hostHash + " with size " + nodes.size() );
 		
 		synchronized( nodes ) {
-			Iterator< Map.Entry< BytesWrapper, NodeId > > itr = nodes.entrySet().iterator();			
+			Iterator< Map.Entry< ByteBuffer, NodeId > > itr = nodes.entrySet().iterator();			
 					
 			while( itr.hasNext() ) {
-				Map.Entry< BytesWrapper, NodeId > entry = itr.next();
+				Map.Entry< ByteBuffer, NodeId > entry = itr.next();
 				NodeId node = entry.getValue();
 				
 				if( node.getRecentFrequency() < Settings.Frequency.collect ) {
@@ -95,12 +110,12 @@ public class HostCache {
 
 
 	public int addNode( String nodeXpath, Integer nodeHash, byte[] path ) {
-		BytesWrapper key = NodeId.makeBytesKey( nodeXpath, nodeHash);
-		NodeId node = nodes.get( key );
+		
+		NodeId node = getNode( nodeXpath, nodeHash );
 		if( null == node ) {
 			// LOG.debug( "adding new node key:" + key );
 			node = new NodeId( nodeXpath, nodeHash );
-			nodes.put( key, node );
+			nodes.put( node.getKey(), node );
 		}
 		
 		// LOG.debug( "adding new path hash:" + pathHash );
@@ -111,7 +126,8 @@ public class HostCache {
 	}
 	
 	public NodeId getNode( String nodeXpath, Integer nodeHash ) {
-		return  nodes.get( NodeId.makeBytesKey( nodeXpath, nodeHash) );		
+		int[] params = { NodeUtil.stringToId( nodeXpath ), nodeHash};
+		return  nodes.get( NodeUtil.intArrToB64BBuffer( params ) );		
 	}
 	
 	@Override
@@ -122,7 +138,7 @@ public class HostCache {
 
 	@Override
 	public boolean equals( Object obj ) {
-		return obj instanceof HostCache && ( (HostCache)obj ).hostHash == hostHash;
+		return ( obj instanceof HostCache ) &&  hostHash.equals( ((HostCache)obj).hostHash );
 	}
 
 	@Override
@@ -135,7 +151,7 @@ public class HostCache {
 		HostCache id = new HostCache( "0byeeQ".getBytes() );
 		System.out.println( "node: " + id );
 		
-		HostCache id2 = new HostCache( id.getBytes() );
+		HostCache id2 = new HostCache( id.hashCode() );
 		System.out.println( "node2: " + id2 );
 		
 		if( id.hashCode() == id2.hashCode() ) {

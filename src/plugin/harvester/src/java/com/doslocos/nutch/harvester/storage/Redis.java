@@ -136,17 +136,17 @@ public class Redis extends Storage {
 	
 		Pipeline p = jedis.pipelined();
 		byte[] cursor = INITIAL_CURSOR;
-		BBWrapper hostPostFix = hc.getKey( false );
+		ByteBuffer hostPostFix = hc.getKey( false );
 		LOG.debug( " SEPARATOR + HOST : " + hostPostFix );
 		
-		LinkedHashMap< BBWrapper, Response< Long > > nodes = new LinkedHashMap< BBWrapper, Response< Long > >( 
+		LinkedHashMap< ByteBuffer, Response< Long > > nodes = new LinkedHashMap< ByteBuffer, Response< Long > >( 
 				Settings.Cache.getInitialCapacity( Settings.Storage.Redis.bucketSize + 1 ),
 				Settings.Cache.load_factor
 			);
 		
 		do {
 			// get the list of nodes for the given host
-			ScanResult<byte[]> scanResult = jedis.sscan( hc.getKey( false ).getBytes(), cursor, Settings.Storage.Redis.scanParams );
+			ScanResult<byte[]> scanResult = jedis.sscan( hc.getKey( false ).array(), cursor, Settings.Storage.Redis.scanParams );
 
 			nodes.clear();
 			
@@ -159,7 +159,7 @@ public class Redis extends Storage {
 				
 			for( byte[] nodeByteKey : nodeKeyList ) {
 				
-				BBWrapper nodeKey = new BBWrapper( nodeByteKey );
+				ByteBuffer nodeKey = ByteBuffer.wrap( nodeByteKey );
 				
 				// byte[] key = new byte[ nodeByteKey.length + hostPostFix.length ];
 				// System.arraycopy( nodeByteKey, 0, key, 0, nodeByteKey.length);
@@ -171,7 +171,7 @@ public class Redis extends Storage {
 			LOG.info( "about to sync, number of nodes is:" + nodes.size() );
 			p.sync();
 			
-			for( Map.Entry<BBWrapper, Response<Long>> e : nodes.entrySet() ) {
+			for( Map.Entry< ByteBuffer, Response<Long> > e : nodes.entrySet() ) {
 				NodeId nodeId = new NodeId( new Long( e.getValue().get() ).intValue(), e.getKey() );
 				if( ! e.getKey().equals( nodeId.getKey() ) ) {
 					LOG.error(" sanity failed." );
@@ -198,7 +198,7 @@ public class Redis extends Storage {
 		}
 		
 		Pipeline p = jedis.pipelined();
-		BBWrapper hostPostFix = hc.getKey( false );
+		ByteBuffer hostPostFix = hc.getKey( false );
 
 		synchronized( hc ) {
 			// TODO fix this	
@@ -210,7 +210,7 @@ public class Redis extends Storage {
 			
 			int writeCounter = 0;
 			
-			for( Map.Entry< BBWrapper, NodeId > node : hc.nodes.entrySet() ) {
+			for( Map.Entry< ByteBuffer, NodeId > node : hc.nodes.entrySet() ) {
 				int recentFrequency = node.getValue().getRecentFrequency(); 
 				int oldFrequency = node.getValue().getFrequency() - recentFrequency;
 				
@@ -219,8 +219,8 @@ public class Redis extends Storage {
 					
 					if( oldFrequency < Settings.Frequency.max ) {
 						// ignoring host postfix // + hostPostFix
-						p.sadd( hostPostFix.getBytes(), node.getKey().getBytes() );
-						p.sadd( node.getKey().getBytes(), node.getValue().getPathsKeysByteArr() );						
+						p.sadd( hostPostFix.array(), node.getKey().array() );
+						p.sadd( node.getKey().array(), node.getValue().getPathsKeysByteArr() );						
 						++writeCounter; // += recentFrequency;
 					} else {
 						LOG.warn( "throwing out paths of populor node:" + node.getKey() );

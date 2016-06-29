@@ -8,6 +8,7 @@ package com.doslocos.nutch.harvester;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,92 +23,81 @@ public class NodeId {
 	static public final int BYTES = 2 * Integer.BYTES;
 	static public final int NUM_PATHS = 128;
 	
-	static private final byte[] tempKeyBuff = new byte[ NodeId.BYTES ];
+	static private final int XPATH_HASH = 0;
+	static private final int NODE_HASH = 1;
+	
+	//static private final byte[] tempKeyBuff = new byte[ NodeId.BYTES ];
 	
 	// public final List< byte[] > paths = Collections.synchronizedList( new ArrayList< byte[] >( NUM_PATHS ) );
 	public final List< byte[] > paths = new ArrayList< byte[] >( NUM_PATHS );
 	
-	
-	private int xpathId, hash;
-	private String key; 
+ 
+	private int[] hashes;
+	private ByteBuffer key; 
 	private int numSavedPath = 0;
 	
+//	
+//	static public String makeStringKey( String nodeXpath, int nodeHash ) {
+//		return NodeUtil.encoder.encodeToString( makeByteArrayId( nodeXpath, nodeHash) );		
+//	}
 	
-	static public String makeStringKey( String nodeXpath, int nodeHash ) {
-		return NodeUtil.encoder.encodeToString( makeByteArrayId( nodeXpath, nodeHash) );		
-	}
-	
-	static public BytesWrapper makeBytesKey( String nodeXpath, int nodeHash ) {
-		synchronized( tempKeyBuff ) {
-			ByteBuffer.wrap( tempKeyBuff ).putInt( NodeUtil.stringToId( nodeXpath ) ).putInt( nodeHash );
-			return new BytesWrapper( NodeUtil.encoder.encode( tempKeyBuff ) );
-		}
-	}
-	
-	static public byte[] makeByteArrayId( String nodeXpath, int nodeHash ) {
-		return ByteBuffer.allocate( NodeId.BYTES ).putInt( NodeUtil.stringToId( nodeXpath ) ).putInt( nodeHash ).array();
-	}
+//	static public BytesWrapper makeBytesKey( String nodeXpath, int nodeHash ) {
+//		synchronized( tempKeyBuff ) {
+//			ByteBuffer.wrap( tempKeyBuff ).putInt( NodeUtil.stringToId( nodeXpath ) ).putInt( nodeHash );
+//			return new BytesWrapper( NodeUtil.encoder.encode( tempKeyBuff ) );
+//		}
+//	}
+//	
+//	static public byte[] makeByteArrayId( String nodeXpath, int nodeHash ) {
+//		return ByteBuffer.allocate( NodeId.BYTES ).putInt( NodeUtil.stringToId( nodeXpath ) ).putInt( nodeHash ).array();
+//	}
 
 
 
-	public NodeId( int xpathId, int hash ) {
-		this.xpathId = xpathId;
-		this.hash = hash;
+	public NodeId( int xpathHash, int nodeHash ) {
+		hashes = new int[2];
+		hashes[XPATH_HASH] = xpathHash;
+		hashes[NODE_HASH] = nodeHash;
+
 		// this.key = NodeUtil.encoder.encodeToString( getBytes() );
+		key = NodeUtil.intArrToB64BBuffer( hashes );
 	}
 
-	public NodeId( String xpath, int hash ) {
-		this( NodeUtil.stringToId( xpath ), hash );;
+	public NodeId( String xpath, int nodeHash ) {
+		this( NodeUtil.stringToId( xpath ), nodeHash );;
 	}
 	
-	public NodeId( NodeId id ) {
-		xpathId = id.xpathId;
-		hash = id.hash;
-		key = id.key;
-		numSavedPath = id.numSavedPath;
-		synchronized ( id.paths ) {
-			paths.addAll( id.paths );
-		}		
+//	public NodeId( NodeId id ) {
+//		xpathHash = id.xpathHash;
+//		nodeHash = id.nodeHash;
+//		key = id.key;
+//		numSavedPath = id.numSavedPath;
+//		synchronized ( id.paths ) {
+//			paths.addAll( id.paths );
+//		}		
+//	}
+	
+	public NodeId( byte bytes[] ) {
+		key = ByteBuffer.wrap( bytes );
+		hashes = NodeUtil.b64BBufferToIntArr( key );
 	}
 	
-	public NodeId( byte b[] ) {
-		ByteBuffer wrapped = ByteBuffer.wrap( b );
-		xpathId = wrapped.getInt();
-		hash = wrapped.getInt();
-		// key = NodeUtil.encoder.encodeToString( wrapped.array() );
-	}
-	
-	public NodeId( String key ) {
-		this( NodeUtil.decoder.decode( key ) );
-		
-		// if( this.key.equals( key ) ) {
-		// 	LOG.info( "sanity passes." );
-		// } else {
-		// 	LOG.error( "sanity failes." );
-		// }
-		
+	public NodeId( int freq ,ByteBuffer key ) {
 		this.key = key;
-	}
-
-	public NodeId( int freq, String key ) {
-		this( key );
+		hashes = NodeUtil.b64BBufferToIntArr( key );
 		numSavedPath = freq;
-	}
-
-	public NodeId( int freq, BytesWrapper key ) {
-		this( key.getBytes() );
-		numSavedPath = freq;
-	}
-
-	public byte[] getBytes() {
-		return  ByteBuffer.allocate( NodeId.BYTES ).putInt( xpathId ).putInt( hash ).array();
 	}
 	
-	public String getKey() {
-		if( null == key ) {
-			LOG.debug( "key does not exist. generating ..." );
-			key = NodeUtil.encoder.encodeToString( getBytes() );
-		}
+		
+
+	public NodeId( int freq, byte[] bytes ) {
+		this( bytes );
+		numSavedPath = freq;
+	}
+	
+
+	public ByteBuffer getKey() {
+		key.clear();
 		return key;
 	}
 
@@ -177,18 +167,17 @@ public class NodeId {
 	
 	@Override
 	public int hashCode() {
-		return xpathId ^ hash;
+		return Arrays.hashCode( hashes );
 	}
 
 	@Override
 	public boolean equals( Object obj ) {
-		NodeId rhs = ( NodeId ) obj;
-		return xpathId == rhs.xpathId && hash == rhs.hash;
+		return obj instanceof NodeId && Arrays.equals( hashes, ((NodeId)obj).hashes );
 	}
 
 	@Override
 	public String toString() {
-		return "xpath:" + xpathId + " hash:" + hash + " key:" + getKey();
+		return "xpath:" + hashes[XPATH_HASH] + " hash:" + hashes[NODE_HASH] + " key:" + new String( key.array() );
 	}
 	
 	/**
@@ -201,7 +190,9 @@ public class NodeId {
 		NodeId id = new NodeId( 25, -1362 );
 		System.out.println( "node: " + id );
 		
-		NodeId id2 = new NodeId( id.getBytes() );
+		byte[] b = id.getKey().array();
+		
+		NodeId id2 = new NodeId( b );
 		System.out.println( "node2: " + id2 );
 		
 		if( id.hashCode() == id2.hashCode() ) {

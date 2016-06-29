@@ -25,27 +25,25 @@ public abstract class Storage {
 
 	static protected final AtomicInteger pageLearnedCounter = new AtomicInteger();
 	
-	// static public ConcurrentHashMap< Integer, HostCache > mainCache;
-	static public ConcurrentHashMap< BytesWrapper, HostCache > mainCache;
+	static public ConcurrentHashMap< Integer, HostCache > mainCache;
 	
 	// static private int cacheHit = 0, cacheMissed = 0;
 	
 	
 	public final Integer hostHash, pathHash;
-	public final BytesWrapper hostKey, pathKey;
-
+	public final ByteBuffer pathKey;
 	public final HostCache hostCache; 
 
 	
 
 	static public void dumpMainCache() {
-		for( Map.Entry< BytesWrapper, HostCache > entry: mainCache.entrySet() ) {
-			BytesWrapper hId = entry.getKey();
+		for( Map.Entry< Integer, HostCache > entry: mainCache.entrySet() ) {
+			Integer hId = entry.getKey();
 			HostCache hc = entry.getValue();
 			
 			LOG.info( "hostId: " + hId );
-			for( Iterator< Map.Entry< BytesWrapper, NodeId > > itr = hc.nodes.entrySet().iterator(); itr.hasNext(); ) {
-				Map.Entry< BytesWrapper, NodeId > pageEntry = itr.next();
+			for( Iterator< Map.Entry< ByteBuffer, NodeId > > itr = hc.nodes.entrySet().iterator(); itr.hasNext(); ) {
+				Map.Entry< ByteBuffer, NodeId > pageEntry = itr.next();
 				Harvester.LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().paths.size() );
 			}
 		}
@@ -56,7 +54,7 @@ public abstract class Storage {
 
 		// prevent being set more than once
 		if( null == mainCache ) synchronized ( Storage.class ) {
-			if( null == mainCache ) mainCache = new ConcurrentHashMap< BytesWrapper, HostCache >( Settings.Cache.hosts_per_job );
+			if( null == mainCache ) mainCache = new ConcurrentHashMap< Integer, HostCache >( Settings.Cache.hosts_per_job );
 		} else {
 			LOG.warn( "Seems like Init was called more than once." );
 		}
@@ -79,7 +77,7 @@ public abstract class Storage {
 	
  	public Storage( String host, String path ) {
 		hostHash = NodeUtil.stringToId( host );
-		hostKey = new BytesWrapper( NodeUtil.intToB64Bytes( hostHash ) );
+		//hostKey = NodeUtil.intToB64BBuffer( hostHash );
 
 		if ( null == path ){
 			path = "/" ;
@@ -87,19 +85,19 @@ public abstract class Storage {
 		}
 
 		pathHash = NodeUtil.stringToId( path );
-		pathKey = new BytesWrapper( NodeUtil.intToB64Bytes( pathHash ) );
+		pathKey = NodeUtil.intToB64BBuffer( pathHash );
 		
-		hostCache = loadHost( hostKey, hostHash );		
+		hostCache = loadHost( hostHash );		
 	}
 
- 	public HostCache loadHost( final BytesWrapper key, final Integer hash ) {
-		HostCache hc = mainCache.get( key );
+ 	public HostCache loadHost( final Integer hash ) {
+		HostCache hc = mainCache.get( hash );
 		if( null == hc ) /*synchronized( mainCache ) */ {
 			// if( null == hostCache ) {
 				LOG.info( "loading host from storage" );
 			
-				hc = loadHostInfo( new HostCache( key, hash ) );
-				mainCache.put( key, hc );
+				hc = loadHostInfo( new HostCache( hash ) );
+				mainCache.put( hash, hc );
 				
 			// }
 		}
@@ -107,8 +105,8 @@ public abstract class Storage {
 		return hc;
 	}
 
- 	public int addNode( String nodeXpath, Integer nodeHash ) {
- 		return hostCache.addNode( nodeXpath, nodeHash, pathKey.getBytes() );
+ 	public int addNodeToThisHost( String nodeXpath, Integer nodeHash ) {
+ 		return hostCache.addNode( nodeXpath, nodeHash, pathKey.array() );
  	}
  	
 	public void filterEnd() {
@@ -135,22 +133,29 @@ public abstract class Storage {
 		LOG.info( "test host:" + tHostName );
 		Integer tHostHash = NodeUtil.stringToId( tHostName );
 		LOG.info( "test host hash:" + tHostHash );
-		BytesWrapper tHostKey = new BytesWrapper( NodeUtil.intToB64Bytes( tHostHash ) );
+		ByteBuffer tHostKey = NodeUtil.intToB64BBuffer( tHostHash );
 		
 		byte[] tempIntegerBuff = new byte[ Integer.BYTES * 2 ];
 		
-		NodeUtil.decoder.decode( tHostKey.getBytes(), tempIntegerBuff );
+		NodeUtil.decoder.decode( tHostKey.array(), tempIntegerBuff );
 		int tHostHash2 = ByteBuffer.wrap( tempIntegerBuff ).getInt( );
 		LOG.info( "test host hash2:" + tHostHash2 );
 		IntBuffer ib = ByteBuffer.wrap( tempIntegerBuff ).asIntBuffer();
 		LOG.info( "test host hash2:" + ib );
 		
-		HostCache h1 = new HostCache( tHostKey.getBytes() );
+
+		
+		
+		HostCache h0 = new HostCache( tHostKey.array() );
+		LOG.info( "h1:" + h0 );
+				
+		HostCache h1 = new HostCache( tHostKey );
 		LOG.info( "h1:" + h1 );
 		
-		HostCache h2 = new HostCache( tHostKey, tHostHash );
+		HostCache h2 = new HostCache( tHostHash );
 		LOG.info( "h2:" + h2 );
 		
+		LOG.info( "h0 ?= h1 " + h0.equals( h1 ) );
 		LOG.info( "h1 ?= h2 " + h1.equals( h2 ) );
 		LOG.info( "h2 ?= h1 " + h2.equals( h1 ) );
 		LOG.info( "h1 hash:" + h1.hashCode() );
@@ -159,11 +164,11 @@ public abstract class Storage {
 		LOG.info( "Begin Test" );
 		
 		saveHostInfo( hostCache );
-		LOG.info( "before test1, hostKey:" + hostKey );
-		HostCache test1 = loadHostInfo( new HostCache( hostKey, hostHash ) );
-		LOG.info( "before test2, hostKey:" + hostKey );
-		HostCache test2 = loadHostInfo( new HostCache( hostKey.getBytes() ) );
-		HostCache test3 = loadHostInfo( new HostCache( hostCache.getKey( false ), hostCache.hostHash ) );
+		LOG.info( "before test1, hostHash:" + hostHash );
+		HostCache test1 = loadHostInfo( new HostCache( hostHash ) );
+		LOG.info( "before test2, hostKey:" + this );
+		HostCache test2 = loadHostInfo( new HostCache( hostCache.getKey( false ).array() ) );
+		HostCache test3 = loadHostInfo( new HostCache( hostCache.getKey( false ) ) );
 		
 		LOG.info( "original:" + hostCache );
 		LOG.info( "test1:" + test1 );
@@ -185,8 +190,8 @@ public abstract class Storage {
 	
 
 	protected void pruneMainCache() {
-		for( Map.Entry< BytesWrapper, HostCache > entry: mainCache.entrySet() ) {
-			BytesWrapper hId = entry.getKey();
+		for( Map.Entry< Integer, HostCache > entry: mainCache.entrySet() ) {
+			Integer hId = entry.getKey();
 			HostCache hc = entry.getValue();
 			
 			if( hc.needSave ) {

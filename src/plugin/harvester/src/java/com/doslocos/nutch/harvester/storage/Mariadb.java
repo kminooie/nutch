@@ -17,7 +17,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.doslocos.nutch.harvester.HostCache2;
+import com.doslocos.nutch.harvester.HostCache;
 import com.doslocos.nutch.harvester.NodeId;
 import com.doslocos.nutch.harvester.Settings;
 
@@ -353,12 +353,12 @@ public class Mariadb extends Storage {
 
 
 	@Override
-	public HostCache2 loadHostInfo( HostCache2 hostCache ) {
-		return new HostCache2( "nohost".getBytes() );
+	public HostCache loadHostInfo( HostCache hostCache ) {
+		return new HostCache( "nohost".hashCode() );
 	}
 
 	@Override
-	public void saveHostInfo( HostCache2 hostCache ) {
+	public void saveHostInfo( HostCache hostCache ) {
 		
 	}
 	

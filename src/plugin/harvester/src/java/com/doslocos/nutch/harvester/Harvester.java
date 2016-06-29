@@ -107,7 +107,7 @@ public class Harvester {
 */
 
 	private void updateNodes( final Storage storage, final Node node, final String xpath ) {
-		int val = storage.addNode( xpath, node.hashCode() );
+		int val = storage.addNodeToThisHost( xpath, node.hashCode() );
 		if( val < Settings.Frequency.write ) {
 
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {

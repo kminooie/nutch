@@ -6,6 +6,7 @@
 package com.doslocos.nutch.util;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Base64;
 
 import org.jsoup.Jsoup;
@@ -96,7 +97,7 @@ public class NodeUtil {
 		return ByteBuffer.wrap( encoder.encode( tempBuff.array() ) );
 	}
 	
-	static public ByteBuffer intArrToB64BBuffer( int[] id ) {
+	static public ByteBuffer intArrToB64BBuffer( final int[] id ) {
 		ByteBuffer tempBuff = ByteBuffer.allocate( id.length * Integer.BYTES );
 		for( int i : id ) {
 			tempBuff.putInt( i );
@@ -108,4 +109,37 @@ public class NodeUtil {
 		return ByteBuffer.wrap( decoder.decode( b.array() ) ).getInt();
 	}
 	
+	
+	static public int[] b64BBufferToIntArr( ByteBuffer b ) {
+		ByteBuffer temp = ByteBuffer.wrap( decoder.decode( b.array() ) );
+		int quantity = temp.capacity() / Integer.BYTES;
+		LOG.info( "Quantity is " + quantity );
+		
+		int[] result = new int[ quantity ];
+		for( ; 0 < quantity; --quantity ) {
+			result[ result.length - quantity ] = temp.getInt();
+		}
+		
+		return result;
+	}
+	
+	
+	public static void main( String[] args ) {
+		int a = 10, b = 0;
+		
+		ByteBuffer buf1 = intToB64BBuffer( a );
+		b = b64BBufferToInt( buf1 );
+		
+		System.out.println( "a ?= b : " + ( a == b ) );
+		
+		int[]aa = { 23,-45, 3 };
+		int[]ba = null;
+		
+		ByteBuffer buf2= intArrToB64BBuffer( aa );
+		ba = b64BBufferToIntArr( buf2 );
+		
+		System.out.println( "aa ?= ba : " + Arrays.equals( aa, ba ) );
+
+	}
+
 }

@@ -5,6 +5,7 @@
 
 package com.doslocos.nutch.harvester;
 
+/*
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
@@ -29,7 +30,7 @@ public class HostCache2 {
 	
 	public final LRUCache< BytesWrapper, NodeId > nodes;
 
-	/*	
+	
 	public HostCache( Integer hostId ) {
 		this.hostHash = hostId;
 		nodes = new LRUCache< BytesWrapper, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
@@ -39,7 +40,7 @@ public class HostCache2 {
 		this(  NodeUtil.decoder.decode( key ) );
 		this.hostKey = key;		
 	}
-	*/
+	
 	
 	public HostCache2( BytesWrapper bytes, Integer hash ) {
 		hostKey = bytes;
@@ -150,3 +151,5 @@ public class HostCache2 {
 		}
 	}
 }
+
+*/
