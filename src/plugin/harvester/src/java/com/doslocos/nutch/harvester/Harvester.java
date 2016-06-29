@@ -107,8 +107,8 @@ public class Harvester {
 */
 
 	private void updateNodes( final Storage storage, final Node node, final String xpath ) {
-		int val = storage.addNodeToThisHost( xpath, node.hashCode() );
-		if( val < Settings.Frequency.write ) {
+		int frequency = storage.addNodeToCurrentHost( xpath, node.hashCode() );
+		if( frequency <= Settings.Frequency.collect ) {
 
 			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 				updateNodes( storage, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
@@ -135,8 +135,7 @@ public class Harvester {
 
 
 	private String filterNode( final Storage storage, final Node node, final String xpath ) {
-		NodeId nid = storage.hostCache.getNode( xpath, node.hashCode() );
-		int frequency = ( null == nid ? 0 : nid.getFrequency() );
+		int frequency = storage.getNodeFrequency( xpath, node.hashCode() );
 		String content = "";
 
 		if( frequency <= Settings.Frequency.collect ) {
@@ -148,7 +147,7 @@ public class Harvester {
 				content += " " + filterNode( storage, child, newXpath );
 			}		
 		} else {
-			LOG.debug( "dropping node " + nid + " with freq:" + frequency );
+			LOG.debug( "dropping node with hash:" + node.hashCode() + " with freq:" + frequency );
 		}
 
 		return content.trim();

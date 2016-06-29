@@ -6,9 +6,7 @@ import java.nio.IntBuffer;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import com.doslocos.nutch.util.BytesWrapper;
 import com.doslocos.nutch.util.NodeUtil;
 import com.doslocos.nutch.harvester.Harvester;
 import com.doslocos.nutch.harvester.HostCache;
@@ -23,8 +21,6 @@ public abstract class Storage {
 
 	static public final Logger LOG = LoggerFactory.getLogger( Storage.class );
 
-	static protected final AtomicInteger pageLearnedCounter = new AtomicInteger();
-	
 	static public ConcurrentHashMap< Integer, HostCache > mainCache;
 	
 	// static private int cacheHit = 0, cacheMissed = 0;
@@ -32,7 +28,7 @@ public abstract class Storage {
 	
 	public final Integer hostHash, pathHash;
 	public final ByteBuffer pathKey;
-	public final HostCache hostCache; 
+	public final HostCache currentHost; 
 
 	
 
@@ -44,7 +40,7 @@ public abstract class Storage {
 			LOG.info( "hostId: " + hId );
 			for( Iterator< Map.Entry< ByteBuffer, NodeId > > itr = hc.nodes.entrySet().iterator(); itr.hasNext(); ) {
 				Map.Entry< ByteBuffer, NodeId > pageEntry = itr.next();
-				Harvester.LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().paths.size() );
+				Harvester.LOG.info( "node: " + pageEntry.getKey() + " size is:" + pageEntry.getValue().getFrequency() );
 			}
 		}
 	}
@@ -87,37 +83,62 @@ public abstract class Storage {
 		pathHash = NodeUtil.stringToId( path );
 		pathKey = NodeUtil.intToB64BBuffer( pathHash );
 		
-		hostCache = loadHost( hostHash );		
+		currentHost = loadHost( hostHash );
+		LOG.info( "Host:" + host + " hostHash:" + hostHash + " path:" + path + " pathHash:" + pathHash );
 	}
 
  	public HostCache loadHost( final Integer hash ) {
 		HostCache hc = mainCache.get( hash );
-		if( null == hc ) /*synchronized( mainCache ) */ {
-			// if( null == hostCache ) {
+		if( null == hc ) synchronized( mainCache ) {
+			hc = mainCache.get( hash );
+			if( null == hc ) {
 				LOG.info( "loading host from storage" );
-			
+		
 				hc = loadHostInfo( new HostCache( hash ) );
-				mainCache.put( hash, hc );
-				
-			// }
+				mainCache.put( hc.getKey(), hc );			
+			}
 		}
+	
 		LOG.info( "got host: " + hc );
 		return hc;
 	}
 
- 	public int addNodeToThisHost( String nodeXpath, Integer nodeHash ) {
- 		return hostCache.addNode( nodeXpath, nodeHash, pathKey.array() );
+ 	public int addNodeToCurrentHost( String nodeXpath, Integer nodeHash ) {
+ 		return currentHost.addNode( nodeXpath, nodeHash, pathKey.array() );
  	}
+ 	
+ 	public int getNodeFrequency( String nodeXpath, Integer nodeHash ) {
+ 		NodeId nid = currentHost.getNode( nodeXpath, nodeHash );
+		return ( null == nid ? 0 : nid.getFrequency() );
+ 	}
+ 	
  	
 	public void filterEnd() {
 		pageEnd( false );
 	}
 	
 	public void learnEnd() {
-		if ( 0 == pageLearnedCounter.incrementAndGet() % Settings.Frequency.gc ) {
-			LOG.info( "after learning gc is triggered, counter:" + pageLearnedCounter.intValue() );
-			pruneMainCache();				
-		}		
+		if ( currentHost.pageLearnedCounter.incrementAndGet() >= Settings.Frequency.gc ) {
+			synchronized( currentHost ) {
+				int c = currentHost.pageLearnedCounter.intValue();
+				LOG.info( "after learning gc is triggered, counter:" + c );
+				if ( c >= Settings.Frequency.gc ) {
+					if( currentHost.needSave ) {
+						if( currentHost.needPrune ) {
+							LOG.info( "pruning hostId: " + hostHash + " with size " + currentHost.nodes.size() );
+							currentHost.pruneNodes();
+							LOG.info( "size after pruning: " + currentHost.nodes.size() );
+						}
+					
+						saveHostInfo( currentHost );
+						currentHost.pageLearnedCounter.set( 0 );
+						LOG.debug( "reseting " + this + " counter to zero" );
+					}
+				}
+			}
+		} else {
+			LOG.debug( "skipping gc, counter is:" + currentHost.pageLearnedCounter.intValue() );
+		}
 
 		// run the test at the end of learning
 		if( null != Settings.Storage.testHost ) {

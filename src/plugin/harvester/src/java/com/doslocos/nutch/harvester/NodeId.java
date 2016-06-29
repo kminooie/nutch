@@ -28,7 +28,7 @@ public class NodeId {
 	//static private final byte[] tempKeyBuff = new byte[ NodeId.BYTES ];
 	
 	// public final List< byte[] > paths = Collections.synchronizedList( new ArrayList< byte[] >( NUM_PATHS ) );
-	public final List< byte[] > paths = new ArrayList< byte[] >( NUM_PATHS );
+	private final List< byte[] > paths = new ArrayList< byte[] >( NUM_PATHS );
 	
  
 	private int[] hashes;
@@ -94,7 +94,11 @@ public class NodeId {
 		numSavedPath = freq;
 	}
 	
-
+	public byte[] getKeyBytes() {
+		key.clear();
+		return key.array();
+	}
+	
 	public ByteBuffer getKey() {
 		key.clear();
 		return key;
@@ -157,7 +161,11 @@ public class NodeId {
 		boolean result = false;
 		
 		if( numSavedPath < Settings.Frequency.max ) {
-			result =  paths.add( path );
+			synchronized( this ) {
+				result =  paths.add( path );
+			}
+		} else if( LOG.isDebugEnabled() ) {
+			LOG.info( "ignoring path:" + new String( path ) + " old frequency:" + numSavedPath + " is bigger than MAX" );
 		}
 
 		return result;
@@ -176,7 +184,7 @@ public class NodeId {
 
 	@Override
 	public String toString() {
-		return "xpath:" + hashes[XPATH_HASH] + " hash:" + hashes[NODE_HASH] + " key:" + new String( key.array() );
+		return "xpath:" + hashes[XPATH_HASH] + " hash:" + hashes[NODE_HASH] + " key:" + new String( key.array() + " with freq:" + getFrequency() + " recent paths:" + getRecentFrequency() );
 	}
 	
 	/**

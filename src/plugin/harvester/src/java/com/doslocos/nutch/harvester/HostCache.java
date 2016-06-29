@@ -8,6 +8,7 @@ package com.doslocos.nutch.harvester;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,7 @@ public class HostCache {
 	public boolean needPrune = false, needSave = false;
 	
 	public final LRUCache< ByteBuffer, NodeId > nodes;
+	public final AtomicInteger pageLearnedCounter = new AtomicInteger( 0 );
 
 	/*	
 	public HostCache( Integer hostId ) {
@@ -93,16 +95,19 @@ public class HostCache {
 	public void pruneNodes() {
 		LOG.info( "pruning hostId: " + hostHash + " with size " + nodes.size() );
 		
-		synchronized( nodes ) {
+		synchronized( this ) {
 			Iterator< Map.Entry< ByteBuffer, NodeId > > itr = nodes.entrySet().iterator();			
 					
 			while( itr.hasNext() ) {
 				Map.Entry< ByteBuffer, NodeId > entry = itr.next();
 				NodeId node = entry.getValue();
 				
-				if( node.getRecentFrequency() <= Settings.Frequency.collect ) {
-					LOG.info( "removing node: " + entry.getKey() + " with freq:" + node.getFrequency() + " recent paths:" + node.getRecentFrequency() );
+				LOG.debug( "pruning node: " + node );
+				if( node.getFrequency() <= Settings.Frequency.collect ) {
 					itr.remove();
+					LOG.info( "removed." );
+				} else {
+					// LOG.debug( "kept." );
 				}
 			}
 			
@@ -117,14 +122,24 @@ public class HostCache {
 		
 		NodeId node = getNode( nodeXpath, nodeHash );
 		if( null == node ) {
-			// LOG.debug( "adding new node key:" + key );
-			node = new NodeId( nodeXpath, nodeHash );
-			nodes.put( node.getKey(), node );
+			synchronized( this ) {
+				node = getNode( nodeXpath, nodeHash );
+				if( null == node ) {
+					node = new NodeId( nodeXpath, nodeHash );
+					LOG.debug( "adding new node key:" + node );
+					nodes.put( node.getKey(), node );
+				}
+			}			
 		}
 		
-		// LOG.debug( "adding new path hash:" + pathHash );
+		
 		node.addPath( path );
 		needPrune = needSave = true;
+		
+		if( LOG.isDebugEnabled() ) {
+			LOG.debug( "added new path hash:" + new String( path ) );
+			LOG.debug( "to node: " + node + " with frequency:" + node.getFrequency() +" and rencent Freq:" + node.getRecentFrequency() );			
+		}
 		
 		return node.getFrequency();
 	}

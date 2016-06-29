@@ -88,6 +88,13 @@
 </property>
 
 
+<property>
+	<name>doslocos.harvester.storage.test_host</name>
+	<value></value>
+	<description>
+	runs a set of tests using the mentioned host data  
+	</description>
+</property>
 
 
 <!-- mysql database authentication -->

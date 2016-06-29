@@ -201,13 +201,7 @@ public class Redis extends Storage {
 		ByteBuffer hostPostFix = hc.getB64Key( false );
 
 		synchronized( hc ) {
-			// TODO fix this	
-			// create host key	
-			// adding while iterating over nodes, moved into the loop
-			//p.sadd( hostPostFix.getBytes(), hc.getNodesKeys() );
-
-			p.sync();
-			
+		
 			int writeCounter = 0;
 			
 			for( Map.Entry< ByteBuffer, NodeId > node : hc.nodes.entrySet() ) {
@@ -218,12 +212,18 @@ public class Redis extends Storage {
 					// String[] pathsKeys = node.getValue().getPathsKeysStrings();
 					
 					if( oldFrequency < Settings.Frequency.max ) {
+						
+						LOG.debug( "saving node:" + node.getKey() );
+						LOG.debug( "with 	recent freq:" + node.getValue().getFrequency() );
+						
 						// ignoring host postfix // + hostPostFix
 						p.sadd( hostPostFix.array(), node.getKey().array() );
 						p.sadd( node.getKey().array(), node.getValue().getPathsKeysByteArr() );						
+						
 						++writeCounter; // += recentFrequency;
+					
 					} else {
-						LOG.warn( "throwing out paths of populor node:" + node.getKey() );
+						LOG.warn( "throwing out paths of populor node:" + node.getValue() );
 					}
 					
 					if( writeCounter > Settings.Storage.Redis.bucketSize ) {
@@ -242,7 +242,7 @@ public class Redis extends Storage {
 
 	}
 
-
+/*
 	@Override
 	protected void finalize(){
 		// System.err.println( "Redis finalize was called." );
@@ -259,11 +259,20 @@ public class Redis extends Storage {
 
 		// super.finalize();
 	}
-	
+*/
 
 	@Override
 	public void pageEnd( boolean learn ) {
 		// LOG.debug( "PageEnd was called" );
+		if( null != jedis ) {
+			try{
+				jedis.close();
+			} catch( Exception e ) {
+				LOG.error( "Got Exception while trying to close jedis: ", e );
+			} finally {
+				jedis = null;
+			}			
+		}
 	}
 
 }

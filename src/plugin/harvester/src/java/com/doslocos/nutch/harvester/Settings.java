@@ -91,7 +91,7 @@ public class Settings {
 
 		static public final String SEPARATOR = ":";
 		static public String connClassName;
-		static public String testHost = "redis.io";
+		static public String testHost;
 
 
 		static public class Redis {
@@ -164,6 +164,7 @@ public class Settings {
 
 		static public void init() {
 			connClassName = conf.get( CONF_PREFIX + "storage.class", null );
+			testHost = conf.get( CONF_PREFIX + "storage.test_host", null );
 					
 			if( connClassName.equals( "com.doslocos.nutch.harvester.storage.Redis" ) ) {
 				Redis.init();
@@ -178,6 +179,9 @@ public class Settings {
 				LOG.error( "com.doslocos.nutch.harvester.storage.Redis" );
 			}
 
+			if( null != testHost ) {
+				LOG.info( "enabled tests for host:" + testHost );
+			}
 			
 		}
 	}
