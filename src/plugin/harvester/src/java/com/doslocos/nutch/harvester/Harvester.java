@@ -139,14 +139,16 @@ public class Harvester {
 		int frequency = ( null == nid ? 0 : nid.getFrequency() );
 		String content = "";
 
-		if( frequency < Settings.Frequency.write ) {
+		if( frequency <= Settings.Frequency.collect ) {
 			content = NodeUtil.extractText( node );
 
 			for( int i = 0, size = node.childNodeSize(); i < size; ++i ) {
 				Node child = node.childNode( i );
 				String newXpath = xpath + "/" + NodeUtil.xpathMaker( child );
-				content = content + " " + filterNode( storage, child, newXpath );
+				content += " " + filterNode( storage, child, newXpath );
 			}		
+		} else {
+			LOG.debug( "dropping node " + nid + " with freq:" + frequency );
 		}
 
 		return content.trim();

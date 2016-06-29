@@ -214,7 +214,7 @@ public class Redis extends Storage {
 				int recentFrequency = node.getValue().getRecentFrequency(); 
 				int oldFrequency = node.getValue().getFrequency() - recentFrequency;
 				
-				if( recentFrequency > Settings.Frequency.write ) {
+				if( recentFrequency >= Settings.Frequency.write ) {
 					// String[] pathsKeys = node.getValue().getPathsKeysStrings();
 					
 					if( oldFrequency < Settings.Frequency.max ) {

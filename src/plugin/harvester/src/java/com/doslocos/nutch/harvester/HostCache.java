@@ -100,7 +100,7 @@ public class HostCache {
 				Map.Entry< ByteBuffer, NodeId > entry = itr.next();
 				NodeId node = entry.getValue();
 				
-				if( node.getRecentFrequency() < Settings.Frequency.collect ) {
+				if( node.getRecentFrequency() <= Settings.Frequency.collect ) {
 					LOG.info( "removing node: " + entry.getKey() + " with freq:" + node.getFrequency() + " recent paths:" + node.getRecentFrequency() );
 					itr.remove();
 				}

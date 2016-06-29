@@ -35,11 +35,11 @@ public class Settings {
 			write =  conf.getInt( CONF_PREFIX + "write" , collect  );
 			LOG.info( "write frequency threshold: " + write );
 
-			max =  conf.getInt( CONF_PREFIX + "max" , write  );
-			LOG.info( "max frequency threshold: " + max );
-
 			gc =  conf.getInt( CONF_PREFIX + "gc" , 10 );
 			LOG.info( "gc frequency threshold: " + gc );
+
+			max =  conf.getInt( CONF_PREFIX + "max" , gc + 1  );
+			LOG.info( "max frequency threshold: " + max );
 		}
 	}
 	

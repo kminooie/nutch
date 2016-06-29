@@ -13,7 +13,6 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.doslocos.nutch.util.BytesWrapper;
 import com.doslocos.nutch.util.NodeUtil;
 
 
@@ -133,7 +132,7 @@ public class NodeId {
 	}
 	
 	public byte[][] getPathsKeysByteArr() {
-		byte[][] result = null;
+		byte[][] result = new byte[0][];
 		
 		synchronized( paths ) {
 			// result = new byte[paths.size()][];
