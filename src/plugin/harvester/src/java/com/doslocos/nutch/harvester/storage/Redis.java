@@ -136,9 +136,10 @@ public class Redis extends Storage {
 	
 		Pipeline p = jedis.pipelined();
 		byte[] cursor = INITIAL_CURSOR;
-		ByteBuffer hostPostFix = hc.getB64Key( false );
-		LOG.debug( " SEPARATOR + HOST : " + hostPostFix );
+		byte[] hcKey = hc.getB64Key( false );
+		LOG.debug( " SEPARATOR + HOST : " + hcKey );
 		
+		// TODO: use queue if order is deterministic, also we are keeping a pair
 		LinkedHashMap< ByteBuffer, Response< Long > > nodes = new LinkedHashMap< ByteBuffer, Response< Long > >( 
 				Settings.Cache.getInitialCapacity( Settings.Storage.Redis.bucketSize + 1 ),
 				Settings.Cache.load_factor
@@ -146,34 +147,31 @@ public class Redis extends Storage {
 		
 		do {
 			// get the list of nodes for the given host
-			ScanResult<byte[]> scanResult = jedis.sscan( hostPostFix.array(), cursor, Settings.Storage.Redis.scanParams );
+			ScanResult<byte[]> scanResult = jedis.sscan( hcKey, cursor, Settings.Storage.Redis.scanParams );
 
 			nodes.clear();
 			
 			cursor = scanResult.getCursorAsBytes();
-			List<byte[]> nodeKeyList = scanResult.getResult();
+			List<byte[]> redisNodeKeyList = scanResult.getResult();
 			
 			if( LOG.isDebugEnabled() ) {
-				LOG.debug( "cursor is " + new String( cursor ) + " result has:" + nodeKeyList.size() );
+				LOG.debug( "cursor is " + new String( cursor ) + " result has:" + redisNodeKeyList.size() );
 			}			
 				
-			for( byte[] nodeByteKey : nodeKeyList ) {
+			for( byte[] nodeByteKey : redisNodeKeyList ) {
 				
 				ByteBuffer nodeKey = ByteBuffer.wrap( nodeByteKey );
-				
-				// byte[] key = new byte[ nodeByteKey.length + hostPostFix.length ];
-				// System.arraycopy( nodeByteKey, 0, key, 0, nodeByteKey.length);
-				// System.arraycopy( hostPostFix, 0, key, nodeByteKey.length, hostPostFix.length);
-				
+
 				nodes.put( nodeKey, p.scard( nodeByteKey ) );
 			}
 			
-			LOG.info( "about to sync, number of nodes is:" + nodes.size() );
+			LOG.debug( "about to sync with redis, number of nodes requested is:" + nodes.size() );
 			p.sync();
 			
 			for( Map.Entry< ByteBuffer, Response<Long> > e : nodes.entrySet() ) {
 				NodeId nodeId = new NodeId( new Long( e.getValue().get() ).intValue(), e.getKey() );
-				if( ! e.getKey().equals( nodeId.getKey() ) ) {
+
+				if( LOG.isDebugEnabled() && ! e.getKey().equals( nodeId.getKey() ) ) {
 					LOG.error(" sanity failed." );
 					LOG.error( e.getKey() + " is not equal with: " + nodeId.getKey() );
 				}
@@ -198,39 +196,33 @@ public class Redis extends Storage {
 		}
 		
 		Pipeline p = jedis.pipelined();
-		ByteBuffer hostPostFix = hc.getB64Key( false );
+		byte[] hcKey = hc.getB64Key( false );
 
 		synchronized( hc ) {
 		
 			int writeCounter = 0;
 			
-			for( Map.Entry< ByteBuffer, NodeId > node : hc.nodes.entrySet() ) {
-				int recentFrequency = node.getValue().getRecentFrequency(); 
-				int oldFrequency = node.getValue().getFrequency() - recentFrequency;
+			for( Map.Entry< ByteBuffer, NodeId > entryNode : hc.nodes.entrySet() ) {
+				NodeId node = entryNode.getValue();
+				int recentFrequency = node.getRecentFrequency();
+				int oldFrequency = node.getFrequency() - recentFrequency;
 				
-				if( recentFrequency >= Settings.Frequency.write ) {
-					// String[] pathsKeys = node.getValue().getPathsKeysStrings();
-					
-					if( oldFrequency < Settings.Frequency.max ) {
-						
-						LOG.debug( "saving node:" + node.getKey() );
-						LOG.debug( "with 	recent freq:" + node.getValue().getFrequency() );
-						
-						// ignoring host postfix // + hostPostFix
-						p.sadd( hostPostFix.array(), node.getKey().array() );
-						p.sadd( node.getKey().array(), node.getValue().getPathsKeysByteArr() );						
-						
-						++writeCounter; // += recentFrequency;
-					
-					} else {
-						LOG.warn( "throwing out paths of populor node:" + node.getValue() );
-					}
-					
-					if( writeCounter > Settings.Storage.Redis.bucketSize ) {
-						p.sync();
-						writeCounter = 0;		
-					}
-				}			
+				if( recentFrequency < Settings.Frequency.write
+						|| oldFrequency >= Settings.Frequency.max) {
+					continue;
+				}
+
+				if( LOG.isDebugEnabled() )
+					LOG.debug( "saving node:" + node );
+				
+				p.sadd( hcKey, node.getB64Key() );
+				p.sadd( node.getB64Key(), node.getPathsKeysByteArr() );						
+				
+				if( ++writeCounter > Settings.Storage.Redis.bucketSize ) {
+					p.sync();
+					writeCounter = 0;		
+				}
+
 			}
 			
 			if( writeCounter > 0 ) {

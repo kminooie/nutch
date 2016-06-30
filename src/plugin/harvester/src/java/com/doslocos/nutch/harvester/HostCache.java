@@ -24,26 +24,12 @@ public class HostCache {
 	
 	private final ByteBuffer hostKey;
 	
-	private Integer hostHash;
-	//private final byte[] hostKey;
-	
-	public boolean needPrune = false, needSave = false;
-	
+	private final Integer hostHash;
+
 	public final LRUCache< ByteBuffer, NodeId > nodes;
 	public final AtomicInteger pageLearnedCounter = new AtomicInteger( 0 );
 
-	/*	
-	public HostCache( Integer hostId ) {
-		this.hostHash = hostId;
-		nodes = new LRUCache< BytesWrapper, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
-	}
-	
-	public HostCache( String key ) {
-		this(  NodeUtil.decoder.decode( key ) );
-		this.hostKey = key;		
-	}
-	*/
-	
+	public boolean needPrune = false, needSave = false;
 	
 	
 	public HostCache( Integer hash ) {
@@ -60,7 +46,8 @@ public class HostCache {
 		
 		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
-	
+
+
 	public HostCache( ByteBuffer bytes ) {
 		hostKey = bytes;
 		hostHash = NodeUtil.b64BBufferToInt( hostKey );
@@ -68,25 +55,16 @@ public class HostCache {
 		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
 	}
 
-	public ByteBuffer getB64Key( boolean prefix ) {
-//		if( prefix ) {
-//			return new BytesWrapper( (new BytesWrapper( Settings.Storage.SEPARATOR.getBytes() ).concat( hostKey ) ) );			
-//		} else {
-//			return hostKey;
-//		}
-		
-		hostKey.clear();
-		return hostKey;
+
+	public byte[] getB64Key( boolean prefix ) {
+		return hostKey.array();
 	}
+
 
 	public Integer getKey() {
 		return hostHash;
 	}
 
-
-//	public byte[] getBytes() {
-//		return  ByteBuffer.allocate( HostCache.BYTES ).putInt( hostHash ).array();
-//	}	
 
 	public String[] getNodesKeys() {
 		return nodes.keySet().toArray( new String[0] );
@@ -151,8 +129,7 @@ public class HostCache {
 	
 	@Override
 	public int hashCode() {
-		return hostHash; // ^ pageNodeId.hashCode();
-		//return key.hashCode();
+		return hostHash.intValue();
 	}
 
 	@Override
@@ -162,8 +139,8 @@ public class HostCache {
 
 	@Override
 	public String toString() {
-		return "host:" + hostHash + " key:" + hostKey + " with value:" + new String( hostKey.array() ) 
-			+ " number of nodes:" + nodes.size() + " pruned:" + ( ! needPrune ) + " saved:" + ( ! needSave );
+		return "host:" + hostHash + " encoded:" + new String( hostKey.array() ) + " no. nodes:" + nodes.size()  
+			+ " pruned:" + ( ! needPrune ) + " saved:" + ( ! needSave )+ " in buffer:" + hostKey;
 	}
 	
 	// test

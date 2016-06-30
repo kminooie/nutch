@@ -92,7 +92,7 @@ public abstract class Storage {
 		if( null == hc ) synchronized( mainCache ) {
 			hc = mainCache.get( hash );
 			if( null == hc ) {
-				LOG.info( "loading host from storage" );
+				LOG.debug( "loading host:" + hash + " from storage" );
 		
 				hc = loadHostInfo( new HostCache( hash ) );
 				mainCache.put( hc.getKey(), hc );			
@@ -197,18 +197,14 @@ public abstract class Storage {
 		LOG.info( "before test1, hostHash:" + tHostHash );
 		HostCache test1 = loadHostInfo( new HostCache( tHostHash ) );
 		LOG.info( "before test2, hostKey:" + tHostKey + "with value:" + new String( tHostKey.array() ) );
-		HostCache test2 = loadHostInfo( new HostCache( h0.getB64Key( false ).array() ) );
-		HostCache test3 = loadHostInfo( new HostCache( h0.getB64Key( false ) ) );
+		HostCache test2 = loadHostInfo( new HostCache( h0.getB64Key( false ) ) );
 		
 		LOG.info( "original:" + h0 );
 		LOG.info( "test1:" + test1 );
 		LOG.info( "test2:" + test2 );
-		LOG.info( "test3:" + test3 );
 		LOG.info( "original ?= 1 :" + h0.equals( test1 ) );
 		LOG.info( "original ?= 2 :" + h0.equals( test2 ) );
-		LOG.info( "original ?= 3 :" + h0.equals( test3 ) );
 		LOG.info( "1 ?= 2 :" + test1.equals( test2 ) );
-		LOG.info( "2 ?= 3 :" + test2.equals( test3 ) );
 		// end test
 	}
 

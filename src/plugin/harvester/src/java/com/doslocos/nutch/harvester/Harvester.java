@@ -43,15 +43,6 @@ public class Harvester {
 
 		try{
 			pageNode = NodeUtil.parseDom( HTMLBody );
-		} catch( Exception e ) {
-			LOG.error( "while parsing got:", e );
-			return result;
-		}
-
-		try {
-			
-			// readAllNodes( storage, pageNode, "html/body" );			
-			// map = storage.getAllFreq();
 
 			updateNodes( storage, pageNode, "html/body" );
 
@@ -67,7 +58,7 @@ public class Harvester {
 
 
 	public String filter( String HTMLBody, String host, String path ) {
-		LOG.info( "start filtering host: " + host + " path: " + path );
+		LOG.debug( "start filtering host: " + host + " path: " + path );
 		
 		String result = null;
 
@@ -80,31 +71,14 @@ public class Harvester {
 			
 			storage.filterEnd();
 
-			LOG.info( "filter function finished for : " + host + path );
+			LOG.debug( "filter function finished for: " + host + " path: " + path );
 		}catch( Exception e ){
-			LOG.error( "Exception while filtering host: " + host, e );
+			LOG.error( "Exception while filtering host: " + host + " path: " + path, e );
 		}
 
 		return result;
 	}
 
-
-	
-/*
-	private void readAllNodes( Storage s, Node node, String xpath ) {
-		Integer hash = node.hashCode();
-
-		NodeId n = .nodes.get( NodeId.makeKey( xpath, hash ) );
-		if( null == n ) {
-			n = new NodeId( xpath, hash );
-			n.addPath(pathId)
-		}
-		k.addNodeToList( xpath, hash );
-		for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
-			readAllNodes( k, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
-		}
-	}
-*/
 
 	private void updateNodes( final Storage storage, final Node node, final String xpath ) {
 		int frequency = storage.addNodeToCurrentHost( xpath, node.hashCode() );
@@ -115,23 +89,6 @@ public class Harvester {
 			}
 		}
 	}
-
-/*
-	private void updateNodes2( final Storage storage, final Map<NodeId, NodeValue> map, final Node node, final String xpath ) {
-		NodeId item = new NodeId( xpath.hashCode(), node.hashCode() );
-
-		NodeValue val = map.get( item );
-
-		storage.incNodeFreq( item, val );
-
-		if( null == val ||  val.frequency < ft_collect ) {
-
-			for (int i = 0, size = node.childNodeSize(); i < size; ++i ) {
-				updateNodes( storage, map, node.childNode( i ), xpath+"/"+NodeUtil.xpathMaker( node.childNode( i ) ) );
-			}
-		}
-	}
-*/
 
 
 	private String filterNode( final Storage storage, final Node node, final String xpath ) {
@@ -165,12 +122,6 @@ public class Harvester {
 
 		return storage;
 	}
-
-
-//	protected void finalize() {
-//		System.err.println( "Harvester finalize was called" );
-//		LOG.info( "Harvester finalize was called." );
-//	}
 
 
 }
