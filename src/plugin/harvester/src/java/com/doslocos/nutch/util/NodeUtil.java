@@ -70,6 +70,10 @@ public class NodeUtil {
 		return string1;	
 	}
 
+	static public int getNodeHashCode( Node n ) {
+		//LOG.info( "node:" + n );
+		return n.toString().hashCode();
+	}
 
 	static public int stringToId( String str ) {
 		return str.hashCode();

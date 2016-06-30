@@ -134,7 +134,7 @@ public class NodeId {
 				result =  paths.add( path );
 			}
 		} else if( LOG.isDebugEnabled() ) {
-			LOG.info( "ignoring path:" + new String( path ) + " old frequency:" + numSavedPath + " is bigger than MAX" );
+			LOG.info( "ignoring path:" + new String( path ) + " for node:" + new String( key.array() ) + " old frequency:" + numSavedPath + " is bigger than MAX" );
 		}
 
 		return result;

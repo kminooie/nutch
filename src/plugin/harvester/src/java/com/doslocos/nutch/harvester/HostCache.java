@@ -23,20 +23,23 @@ public class HostCache {
 	static public final int BYTES = Integer.BYTES ;// + NodeId.BYTES;
 	
 	private final ByteBuffer hostKey;
-	
 	private final Integer hostHash;
 
 	public final LRUCache< ByteBuffer, NodeId > nodes;
 	public final AtomicInteger pageLearnedCounter = new AtomicInteger( 0 );
 
 	public boolean needPrune = false, needSave = false;
-	
+	public int max = 0, min = 0;
 	
 	public HostCache( Integer hash ) {
+		int capacity = Settings.Cache.getInitialCapacity( Math.round(
+				Settings.Cache.nodes_per_page * Settings.Frequency.gc * Settings.Cache.load_factor
+			) + 1 );
+		
 		hostHash = hash;
 		hostKey = NodeUtil.intToB64BBuffer( hostHash );
 		
-		nodes = new LRUCache< ByteBuffer, NodeId > ( Settings.Cache.nodes_per_page, Settings.Cache.load_factor );
+		nodes = new LRUCache< ByteBuffer, NodeId > ( capacity, Settings.Cache.load_factor );
 	}
 	
 	
@@ -75,24 +78,31 @@ public class HostCache {
 		
 		synchronized( this ) {
 			Iterator< Map.Entry< ByteBuffer, NodeId > > itr = nodes.entrySet().iterator();			
-					
+			min = max = -1;
 			while( itr.hasNext() ) {
 				Map.Entry< ByteBuffer, NodeId > entry = itr.next();
 				NodeId node = entry.getValue();
+				int freq = node.getFrequency();
 				
-				LOG.debug( "pruning node: " + node );
-				if( node.getFrequency() <= Settings.Frequency.collect ) {
+				// LOG.debug( "pruning node: " + node );
+				if( freq < Settings.Frequency.collect ) {
 					itr.remove();
-					LOG.info( "removed." );
+					// LOG.debug( "removed." );
 				} else {
 					// LOG.debug( "kept." );
+					if( freq > max ) {
+						max = freq;
+					} else if ( freq < min || -1 == min ) {
+						min = freq;
+					}
 				}
 			}
 			
 			needPrune = false;
 		}
 		
-		LOG.info( "size after pruning: " + nodes.size() );
+		LOG.info( "size after pruning: " + nodes.size() + " min:" + min + " max:" + max );
+		 
 	}
 
 
@@ -104,7 +114,7 @@ public class HostCache {
 				node = getNode( nodeXpath, nodeHash );
 				if( null == node ) {
 					node = new NodeId( nodeXpath, nodeHash );
-					LOG.debug( "adding new node key:" + node );
+					// LOG.debug( "adding new node key:" + node );
 					nodes.put( node.getKey(), node );
 				}
 			}			
@@ -114,10 +124,10 @@ public class HostCache {
 		node.addPath( path );
 		needPrune = needSave = true;
 		
-		if( LOG.isDebugEnabled() ) {
-			LOG.debug( "added new path hash:" + new String( path ) );
-			LOG.debug( "to node: " + node + " with frequency:" + node.getFrequency() +" and rencent Freq:" + node.getRecentFrequency() );			
-		}
+//		if( LOG.isDebugEnabled() ) {
+//			LOG.debug( "added new path hash:" + new String( path ) );
+//			LOG.debug( "to node: " + node + " with frequency:" + node.getFrequency() +" and rencent Freq:" + node.getRecentFrequency() );			
+//		}
 		
 		return node.getFrequency();
 	}

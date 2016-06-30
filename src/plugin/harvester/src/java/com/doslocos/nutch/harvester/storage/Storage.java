@@ -84,7 +84,8 @@ public abstract class Storage {
 		pathKey = NodeUtil.intToB64BBuffer( pathHash );
 		
 		currentHost = loadHost( hostHash );
-		LOG.info( "Host:" + host + " hostHash:" + hostHash + " path:" + path + " pathHash:" + pathHash );
+		LOG.info( "Host:" + host + " hostHash:" + hostHash + " path:" + path + " Hash:" + pathHash
+				+ " key:" + new String( pathKey.array() ) );
 	}
 
  	public HostCache loadHost( final Integer hash ) {
@@ -208,11 +209,6 @@ public abstract class Storage {
 		// end test
 	}
 
-
-//	protected void finalize() {
-//		System.err.println( "Storage finalize was called" );
-//		LOG.info( "Storage finalize was called." );
-//	}
 	
 
 	protected void pruneMainCache() {

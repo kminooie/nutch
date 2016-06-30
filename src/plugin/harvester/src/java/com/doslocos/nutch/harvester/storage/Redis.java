@@ -212,8 +212,8 @@ public class Redis extends Storage {
 					continue;
 				}
 
-				if( LOG.isDebugEnabled() )
-					LOG.debug( "saving node:" + node );
+				// if( LOG.isDebugEnabled() )
+				//	LOG.debug( "saving node:" + node );
 				
 				p.sadd( hcKey, node.getB64Key() );
 				p.sadd( node.getB64Key(), node.getPathsKeysByteArr() );						
